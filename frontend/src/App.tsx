@@ -25,6 +25,8 @@ import {
   ArrowDownLeft,
 } from 'lucide-react';
 import type { NetworkInterface, ServerStatus, TransferEvent } from './types';
+import { useTransfer } from './hooks/useTransfer';
+import { ActivePanel } from './components/Transfer/ActivePanel';
 
 // ═══════════════════════════════════════════════════════════════
 // AERO LOGO COMPONENT
@@ -443,6 +445,9 @@ function App() {
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [isDragOver, setIsDragOver] = useState(false);
   
+  // Term-Phase 2: Transfer HUD state
+  const { state: activeTransfer, simulateTransfer } = useTransfer();
+  
   const transferIdCounter = useRef(0);
 
   // Load interfaces
@@ -569,6 +574,12 @@ function App() {
           loading={loading}
           onToggle={handleToggle}
           onSendToPhone={handleSendToPhone}
+        />
+
+        {/* Term-Phase 2: Active Transfer HUD */}
+        <ActivePanel 
+          transfer={activeTransfer} 
+          onTest={() => simulateTransfer()}
         />
 
         {/* Zone B: Recent Files */}
