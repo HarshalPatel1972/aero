@@ -1,9 +1,9 @@
 /**
  * AERO Desktop Application
- * Phase 3: The Interface
+ * Term-Phase 1: Identity & Universal UX
  * 
- * A sophisticated, "Invisible Tech" aesthetic file transfer UI.
- * Built with React, TypeScript, and TailwindCSS.
+ * "Braun Electronics meets Cyberpunk"
+ * Designed for both grandma and power users.
  */
 
 import { useEffect, useState, useCallback, useRef } from 'react';
@@ -12,16 +12,48 @@ import {
   Power,
   Minus,
   X,
-  Folder,
+  FolderOpen,
   Wifi,
   WifiOff,
   ChevronDown,
   FileCheck,
   Loader2,
   Volume2,
-  Upload,
+  VolumeX,
+  Send,
+  ArrowUpRight,
+  ArrowDownLeft,
 } from 'lucide-react';
 import type { NetworkInterface, ServerStatus, TransferEvent } from './types';
+
+// ═══════════════════════════════════════════════════════════════
+// AERO LOGO COMPONENT
+// ═══════════════════════════════════════════════════════════════
+
+function AeroLogo({ className = '' }: { className?: string }) {
+  return (
+    <svg 
+      viewBox="0 0 512 512" 
+      fill="none" 
+      className={className}
+    >
+      <rect x="32" y="32" width="448" height="448" rx="96" ry="96" fill="#050505"/>
+      <defs>
+        <linearGradient id="aeroGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#00E5FF"/>
+          <stop offset="100%" stopColor="#00B4D8"/>
+        </linearGradient>
+      </defs>
+      <path 
+        d="M256 96 L384 384 L336 384 L304 304 L208 304 L176 384 L128 384 L256 96 Z M256 176 L224 272 L288 272 L256 176 Z" 
+        fill="url(#aeroGrad)"
+      />
+      <path d="M128 192 L96 192" stroke="#00E5FF" strokeWidth="8" strokeLinecap="round" opacity="0.6"/>
+      <path d="M144 240 L80 240" stroke="#00E5FF" strokeWidth="6" strokeLinecap="round" opacity="0.4"/>
+      <path d="M136 288 L104 288" stroke="#00E5FF" strokeWidth="4" strokeLinecap="round" opacity="0.3"/>
+    </svg>
+  );
+}
 
 // ═══════════════════════════════════════════════════════════════
 // TYPES
@@ -32,76 +64,69 @@ interface Transfer {
   filename: string;
   status: 'started' | 'progress' | 'completed' | 'error';
   progress: number;
+  direction: 'send' | 'receive';
   timestamp: Date;
 }
 
 // ═══════════════════════════════════════════════════════════════
-// AUDIO FEEDBACK
+// AUDIO
 // ═══════════════════════════════════════════════════════════════
 
 const playCompletionSound = () => {
   try {
-    const audioContext = new AudioContext();
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
-    
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-    
-    oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
-    oscillator.frequency.setValueAtTime(1100, audioContext.currentTime + 0.1);
-    
-    gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-    
-    oscillator.start(audioContext.currentTime);
-    oscillator.stop(audioContext.currentTime + 0.3);
-  } catch {
-    // Audio not available, fail silently
-  }
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.setValueAtTime(1100, ctx.currentTime + 0.1);
+    gain.gain.setValueAtTime(0.08, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.3);
+  } catch { /* silent */ }
 };
 
 // ═══════════════════════════════════════════════════════════════
-// COMPONENTS
+// CUSTOM TITLEBAR
 // ═══════════════════════════════════════════════════════════════
 
-/**
- * Custom Title Bar with drag region and window controls.
- */
 function TitleBar() {
-  const handleMinimize = () => window.runtime?.WindowMinimise();
-  const handleClose = () => window.runtime?.WindowClose();
-
   return (
-    <div className="wails-drag h-10 flex items-center justify-between px-3 border-b border-white/5">
-      <div className="flex items-center gap-2">
-        <div className="w-3 h-3 rounded-full bg-emerald-500/80" />
-        <span className="text-xs font-medium text-zinc-400 tracking-wide">AERO</span>
+    <div className="wails-drag h-11 flex items-center justify-between px-4 
+      bg-void-surface/80 backdrop-blur-glass border-b border-white/5">
+      <div className="flex items-center gap-2.5">
+        <AeroLogo className="w-5 h-5" />
+        <span className="text-sm font-semibold text-white/90 tracking-tight">Aero</span>
       </div>
       
-      <div className="wails-no-drag flex items-center gap-1">
+      <div className="wails-no-drag flex items-center gap-0.5">
         <button
-          onClick={handleMinimize}
-          className="p-1.5 rounded hover:bg-white/5 transition-colors"
+          onClick={() => window.runtime?.WindowMinimise()}
+          className="p-2 rounded-lg hover:bg-white/5 transition-all duration-200 
+            active:scale-95 transform-gpu"
           aria-label="Minimize"
         >
-          <Minus className="w-3.5 h-3.5 text-zinc-500" />
+          <Minus className="w-4 h-4 text-white/40" />
         </button>
         <button
-          onClick={handleClose}
-          className="p-1.5 rounded hover:bg-red-500/20 transition-colors group"
+          onClick={() => window.runtime?.WindowClose()}
+          className="p-2 rounded-lg hover:bg-red-500/20 transition-all duration-200 
+            group active:scale-95 transform-gpu"
           aria-label="Close"
         >
-          <X className="w-3.5 h-3.5 text-zinc-500 group-hover:text-red-400" />
+          <X className="w-4 h-4 text-white/40 group-hover:text-red-400" />
         </button>
       </div>
     </div>
   );
 }
 
-/**
- * Network Interface Selector Dropdown.
- */
+// ═══════════════════════════════════════════════════════════════
+// NETWORK SELECTOR
+// ═══════════════════════════════════════════════════════════════
+
 function NetworkSelector({
   interfaces,
   selected,
@@ -121,38 +146,45 @@ function NetworkSelector({
         onClick={() => !disabled && setOpen(!open)}
         disabled={disabled}
         className={`
-          w-full flex items-center justify-between gap-2 px-3 py-2
-          bg-zinc-900/50 border border-white/10 rounded-lg
-          text-sm transition-all
-          ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-white/20'}
+          w-full flex items-center justify-between gap-3 px-4 py-3
+          bg-void-surface/50 backdrop-blur-glass
+          border border-void-border rounded-xl
+          text-base transition-all duration-200
+          ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-aero-cyan/30 hover:bg-void-elevated/50'}
+          active:scale-[0.99] transform-gpu
         `}
       >
-        <div className="flex items-center gap-2 min-w-0">
-          <Wifi className="w-4 h-4 text-zinc-500 flex-shrink-0" />
-          <span className="text-zinc-300 truncate">
-            {selected ? `${selected.name} (${selected.ip})` : 'Select network...'}
-          </span>
+        <div className="flex items-center gap-3 min-w-0">
+          <Wifi className="w-5 h-5 text-white/40 flex-shrink-0" />
+          <div className="text-left">
+            <p className="text-white/90 font-medium truncate">
+              {selected ? selected.name : 'Select Network'}
+            </p>
+            <p className="text-xs text-white/40">
+              {selected ? selected.ip : 'Choose your connection'}
+            </p>
+          </div>
         </div>
-        <ChevronDown className={`w-4 h-4 text-zinc-500 transition-transform ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`w-5 h-5 text-white/40 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
       </button>
 
       {open && !disabled && (
-        <div className="absolute z-10 mt-1 w-full bg-zinc-900 border border-white/10 rounded-lg shadow-xl overflow-hidden animate-fade-in">
+        <div className="absolute z-20 mt-2 w-full 
+          bg-void-surface/95 backdrop-blur-glass
+          border border-void-border rounded-xl 
+          shadow-2xl shadow-black/50 overflow-hidden animate-scale-in">
           {interfaces.map((iface) => (
             <button
               key={iface.ip}
-              onClick={() => {
-                onSelect(iface);
-                setOpen(false);
-              }}
+              onClick={() => { onSelect(iface); setOpen(false); }}
               className={`
-                w-full px-3 py-2 text-left text-sm transition-colors
-                hover:bg-white/5
-                ${selected?.ip === iface.ip ? 'bg-white/5 text-zinc-100' : 'text-zinc-400'}
+                w-full px-4 py-3 text-left transition-all duration-150
+                hover:bg-aero-cyan/10 active:scale-[0.99] transform-gpu
+                ${selected?.ip === iface.ip ? 'bg-aero-cyan/10' : ''}
               `}
             >
-              <div className="font-medium">{iface.name}</div>
-              <div className="text-xs text-zinc-500">{iface.ip}</div>
+              <p className="text-base font-medium text-white/90">{iface.name}</p>
+              <p className="text-sm text-white/40">{iface.ip}</p>
             </button>
           ))}
         </div>
@@ -161,192 +193,237 @@ function NetworkSelector({
   );
 }
 
-/**
- * QR Code Display with breathing animation.
- */
-function QRCodeSection({ url, active }: { url: string; active: boolean }) {
+// ═══════════════════════════════════════════════════════════════
+// QR CODE ZONE (Zone A - Receive Mode)
+// ═══════════════════════════════════════════════════════════════
+
+function QRZone({ url, active }: { url: string; active: boolean }) {
   return (
-    <div className="flex flex-col items-center gap-4 py-6">
-      <div
-        className={`
-          relative p-4 bg-white rounded-2xl
-          ${active ? 'animate-pulse-slow' : 'opacity-40'}
-          transition-opacity duration-500
-        `}
-      >
-        {/* Glow effect */}
+    <div className="flex flex-col items-center gap-5">
+      {/* Big Label */}
+      <h2 className="text-xl font-bold text-white/90 tracking-tight">
+        {active ? 'Receive Files' : 'Ready to Connect'}
+      </h2>
+      
+      {/* QR Container */}
+      <div className={`
+        relative p-5 rounded-3xl
+        bg-white transition-all duration-500
+        ${active ? 'shadow-glow-cyan animate-breathe' : 'opacity-50'}
+      `}>
+        {/* Glow */}
         {active && (
-          <div className="absolute inset-0 bg-emerald-500/20 rounded-2xl blur-xl" />
+          <div className="absolute inset-0 bg-aero-cyan/30 rounded-3xl blur-2xl -z-10" />
         )}
         
-        <div className="relative">
-          <QRCodeSVG
-            value={url || 'https://aero.local'}
-            size={180}
-            level="M"
-            bgColor="transparent"
-            fgColor={active ? '#18181b' : '#71717a'}
-          />
-        </div>
+        <QRCodeSVG
+          value={url || 'https://aero.app'}
+          size={160}
+          level="M"
+          bgColor="transparent"
+          fgColor={active ? '#050505' : '#666666'}
+        />
       </div>
 
-      {active ? (
-        <p className="text-xs text-zinc-500 text-center max-w-[200px]">
-          Scan with your phone to transfer files securely
-        </p>
-      ) : (
-        <p className="text-xs text-zinc-600 text-center">
-          Start server to enable transfers
-        </p>
-      )}
+      {/* Instructions */}
+      <p className="text-base text-white/50 text-center max-w-[240px]">
+        {active 
+          ? 'Scan with your phone camera to start transferring' 
+          : 'Start server to connect devices'}
+      </p>
     </div>
   );
 }
 
-/**
- * Power Toggle Button.
- */
-function PowerButton({
+// ═══════════════════════════════════════════════════════════════
+// POWER & SEND BUTTONS
+// ═══════════════════════════════════════════════════════════════
+
+function ActionButtons({
   active,
   loading,
-  onClick,
+  onToggle,
+  onSendToPhone,
 }: {
   active: boolean;
   loading: boolean;
-  onClick: () => void;
+  onToggle: () => void;
+  onSendToPhone: () => void;
 }) {
   return (
-    <button
-      onClick={onClick}
-      disabled={loading}
-      className={`
-        relative w-14 h-14 rounded-full
-        flex items-center justify-center
-        transition-all duration-300
-        ${active 
-          ? 'bg-emerald-500/20 text-emerald-400 shadow-lg shadow-emerald-500/20' 
-          : 'bg-zinc-800/50 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-400'
-        }
-        ${loading ? 'cursor-wait' : ''}
-      `}
-      aria-label={active ? 'Stop server' : 'Start server'}
-    >
-      {loading ? (
-        <Loader2 className="w-6 h-6 animate-spin" />
-      ) : (
-        <Power className="w-6 h-6" />
+    <div className="flex items-center justify-center gap-4">
+      {/* Power Button */}
+      <button
+        onClick={onToggle}
+        disabled={loading}
+        className={`
+          relative w-16 h-16 rounded-2xl
+          flex items-center justify-center
+          transition-all duration-300
+          active:scale-95 transform-gpu
+          ${active 
+            ? 'bg-aero-cyan/20 text-aero-cyan shadow-glow-cyan' 
+            : 'bg-void-elevated text-white/40 hover:bg-void-border hover:text-white/60'}
+          ${loading ? 'cursor-wait' : ''}
+        `}
+        aria-label={active ? 'Stop' : 'Start'}
+      >
+        {loading ? (
+          <Loader2 className="w-7 h-7 animate-spin" />
+        ) : (
+          <Power className="w-7 h-7" />
+        )}
+        
+        {active && !loading && (
+          <div className="absolute inset-0 rounded-2xl border-2 border-aero-cyan/40 animate-ping" />
+        )}
+      </button>
+
+      {/* Send to Phone Button */}
+      {active && (
+        <button
+          onClick={onSendToPhone}
+          className="
+            w-16 h-16 rounded-2xl
+            flex items-center justify-center
+            bg-void-elevated text-white/60
+            hover:bg-aero-cyan/10 hover:text-aero-cyan
+            transition-all duration-300
+            active:scale-95 transform-gpu
+          "
+          aria-label="Send file to phone"
+        >
+          <Send className="w-6 h-6" />
+        </button>
       )}
-      
-      {/* Active ring */}
-      {active && !loading && (
-        <div className="absolute inset-0 rounded-full border-2 border-emerald-500/50 animate-ping" />
-      )}
-    </button>
+    </div>
   );
 }
 
-/**
- * Transfer List Item.
- */
+// ═══════════════════════════════════════════════════════════════
+// RECENT FILES (Zone B)
+// ═══════════════════════════════════════════════════════════════
+
 function TransferItem({ transfer }: { transfer: Transfer }) {
+  const isSend = transfer.direction === 'send';
+  
   return (
-    <div className="flex items-center gap-3 px-3 py-2 bg-zinc-900/30 rounded-lg animate-slide-up">
+    <div className="flex items-center gap-4 px-4 py-3 
+      bg-void-surface/30 backdrop-blur-sm
+      rounded-xl border border-void-border/50
+      animate-slide-up">
+      {/* Icon */}
       <div className={`
-        w-8 h-8 rounded-lg flex items-center justify-center
-        ${transfer.status === 'completed' ? 'bg-emerald-500/20' : 'bg-zinc-800'}
+        w-10 h-10 rounded-xl flex items-center justify-center
+        ${transfer.status === 'completed' 
+          ? 'bg-aero-cyan/15 text-aero-cyan' 
+          : 'bg-void-elevated text-white/40'}
       `}>
         {transfer.status === 'completed' ? (
-          <FileCheck className="w-4 h-4 text-emerald-400" />
-        ) : transfer.status === 'started' || transfer.status === 'progress' ? (
-          <Loader2 className="w-4 h-4 text-zinc-400 animate-spin" />
+          <FileCheck className="w-5 h-5" />
+        ) : transfer.status === 'error' ? (
+          <X className="w-5 h-5 text-red-400" />
         ) : (
-          <X className="w-4 h-4 text-red-400" />
+          <Loader2 className="w-5 h-5 animate-spin" />
         )}
       </div>
       
+      {/* Info */}
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-zinc-200 truncate">{transfer.filename}</p>
-        <p className="text-xs text-zinc-500">
-          {transfer.status === 'completed' && 'Transferred successfully'}
-          {transfer.status === 'started' && 'Starting transfer...'}
+        <p className="text-base font-medium text-white/90 truncate">
+          {transfer.filename}
+        </p>
+        <p className="text-sm text-white/40">
+          {transfer.status === 'completed' && 'Complete'}
+          {transfer.status === 'started' && 'Starting...'}
           {transfer.status === 'progress' && `${transfer.progress}%`}
-          {transfer.status === 'error' && 'Transfer failed'}
+          {transfer.status === 'error' && 'Failed'}
         </p>
+      </div>
+
+      {/* Direction Badge */}
+      <div className={`
+        flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium
+        ${isSend ? 'bg-blue-500/15 text-blue-400' : 'bg-aero-cyan/15 text-aero-cyan'}
+      `}>
+        {isSend ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownLeft className="w-3 h-3" />}
+        {isSend ? 'Sent' : 'Received'}
       </div>
     </div>
   );
 }
 
-/**
- * Recent Transfers Section.
- */
-function TransferList({ transfers }: { transfers: Transfer[] }) {
-  if (transfers.length === 0) {
-    return (
-      <div className="flex-1 flex items-center justify-center">
-        <p className="text-xs text-zinc-600 text-center">
-          No recent transfers
-        </p>
-      </div>
-    );
-  }
-
+function RecentFilesZone({ transfers }: { transfers: Transfer[] }) {
   return (
-    <div className="flex-1 overflow-y-auto scrollbar-thin space-y-2 px-1">
-      {transfers.map((transfer) => (
-        <TransferItem key={transfer.id} transfer={transfer} />
-      ))}
+    <div className="flex flex-col gap-3 flex-1 min-h-0">
+      <h3 className="text-sm font-semibold text-white/50 uppercase tracking-wider px-1">
+        Recent Files
+      </h3>
+      
+      <div className="flex-1 overflow-y-auto space-y-2 scrollbar-thin">
+        {transfers.length === 0 ? (
+          <div className="flex items-center justify-center h-full">
+            <p className="text-base text-white/30">No transfers yet</p>
+          </div>
+        ) : (
+          transfers.map(t => <TransferItem key={t.id} transfer={t} />)
+        )}
+      </div>
     </div>
   );
 }
 
-/**
- * Status Bar.
- */
+// ═══════════════════════════════════════════════════════════════
+// STATUS BAR
+// ═══════════════════════════════════════════════════════════════
+
 function StatusBar({
   active,
-  onOpenFolder,
   soundEnabled,
+  onOpenFolder,
   onToggleSound,
 }: {
   active: boolean;
-  onOpenFolder: () => void;
   soundEnabled: boolean;
+  onOpenFolder: () => void;
   onToggleSound: () => void;
 }) {
   return (
-    <div className="flex items-center justify-between px-3 py-2 border-t border-white/5">
+    <div className="flex items-center justify-between px-4 py-3 
+      bg-void-surface/50 backdrop-blur-glass border-t border-void-border">
+      {/* Status */}
       <div className="flex items-center gap-2">
         {active ? (
           <>
-            <Wifi className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="text-xs text-emerald-400">Ready</span>
+            <div className="w-2 h-2 rounded-full bg-aero-cyan animate-glow-pulse" />
+            <span className="text-sm font-medium text-aero-cyan">Connected</span>
           </>
         ) : (
           <>
-            <WifiOff className="w-3.5 h-3.5 text-zinc-600" />
-            <span className="text-xs text-zinc-600">Offline</span>
+            <WifiOff className="w-4 h-4 text-white/30" />
+            <span className="text-sm text-white/30">Offline</span>
           </>
         )}
       </div>
       
+      {/* Actions */}
       <div className="flex items-center gap-1">
         <button
           onClick={onToggleSound}
-          className={`
-            p-1.5 rounded transition-colors
-            ${soundEnabled ? 'text-zinc-400 hover:text-zinc-300' : 'text-zinc-600'}
-          `}
+          className="p-2 rounded-lg hover:bg-white/5 transition-all active:scale-95 transform-gpu"
           aria-label="Toggle sound"
         >
-          <Volume2 className="w-3.5 h-3.5" />
+          {soundEnabled 
+            ? <Volume2 className="w-4 h-4 text-white/40" />
+            : <VolumeX className="w-4 h-4 text-white/30" />
+          }
         </button>
         <button
           onClick={onOpenFolder}
-          className="p-1.5 rounded text-zinc-500 hover:text-zinc-300 hover:bg-white/5 transition-colors"
-          aria-label="Open downloads folder"
+          className="p-2 rounded-lg hover:bg-white/5 transition-all active:scale-95 transform-gpu"
+          aria-label="Open folder"
         >
-          <Folder className="w-3.5 h-3.5" />
+          <FolderOpen className="w-4 h-4 text-white/40" />
         </button>
       </div>
     </div>
@@ -358,86 +435,63 @@ function StatusBar({
 // ═══════════════════════════════════════════════════════════════
 
 function App() {
-  // State
   const [interfaces, setInterfaces] = useState<NetworkInterface[]>([]);
   const [selectedInterface, setSelectedInterface] = useState<NetworkInterface | null>(null);
   const [serverStatus, setServerStatus] = useState<ServerStatus | null>(null);
   const [loading, setLoading] = useState(false);
   const [transfers, setTransfers] = useState<Transfer[]>([]);
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [isDragOver, setIsDragOver] = useState(false);
   
   const transferIdCounter = useRef(0);
 
-  // Load network interfaces on mount
+  // Load interfaces
   useEffect(() => {
-    const loadInterfaces = async () => {
+    (async () => {
       try {
         const ifaces = await window.go?.main.App.GetLocalIPs();
-        if (ifaces && ifaces.length > 0) {
+        if (ifaces?.length) {
           setInterfaces(ifaces);
           setSelectedInterface(ifaces[0]);
         }
-      } catch (err) {
-        console.error('Failed to load interfaces:', err);
-      }
-    };
-
-    loadInterfaces();
+      } catch (err) { console.error(err); }
+    })();
   }, []);
 
-  // Subscribe to Wails events
+  // Events
   useEffect(() => {
-    const handleServerStarted = (data: unknown) => {
-      const status = data as ServerStatus;
-      setServerStatus(status);
+    const onStarted = (data: unknown) => {
+      setServerStatus(data as ServerStatus);
       setLoading(false);
     };
-
-    const handleServerStopped = () => {
+    const onStopped = () => {
       setServerStatus(null);
       setLoading(false);
     };
-
-    const handleTransferProgress = (data: unknown) => {
-      const event = data as TransferEvent;
-      
-      setTransfers((prev) => {
-        // Find existing transfer
-        const existing = prev.find(
-          (t) => t.filename === event.filename && t.status !== 'completed'
-        );
-
+    const onProgress = (data: unknown) => {
+      const e = data as TransferEvent;
+      setTransfers(prev => {
+        const existing = prev.find(t => t.filename === e.filename && t.status !== 'completed');
         if (existing) {
-          // Update existing
-          return prev.map((t) =>
-            t.id === existing.id
-              ? { ...t, status: event.status, progress: event.progress }
-              : t
-          );
-        } else if (event.status === 'started') {
-          // Add new transfer at the beginning
-          const newTransfer: Transfer = {
-            id: `transfer-${transferIdCounter.current++}`,
-            filename: event.filename,
-            status: event.status,
+          return prev.map(t => t.id === existing.id ? { ...t, status: e.status, progress: e.progress } : t);
+        } else if (e.status === 'started') {
+          return [{
+            id: `t-${transferIdCounter.current++}`,
+            filename: e.filename,
+            status: e.status,
             progress: 0,
+            direction: ((e as TransferEvent & { direction?: string }).direction === 'send' ? 'send' : 'receive') as 'send' | 'receive',
             timestamp: new Date(),
-          };
-          return [newTransfer, ...prev].slice(0, 10); // Keep last 10
+          }, ...prev].slice(0, 10);
         }
-        
         return prev;
       });
-
-      // Play sound on completion
-      if (event.status === 'completed' && soundEnabled) {
-        playCompletionSound();
-      }
+      if (e.status === 'completed' && soundEnabled) playCompletionSound();
     };
 
-    window.runtime?.EventsOn('server:started', handleServerStarted);
-    window.runtime?.EventsOn('server:stopped', handleServerStopped);
-    window.runtime?.EventsOn('transfer:progress', handleTransferProgress);
+    window.runtime?.EventsOn('server:started', onStarted);
+    window.runtime?.EventsOn('server:stopped', onStopped);
+    window.runtime?.EventsOn('transfer:progress', onProgress);
 
     return () => {
       window.runtime?.EventsOff('server:started');
@@ -446,40 +500,58 @@ function App() {
     };
   }, [soundEnabled]);
 
-  // Toggle server
-  const handleToggleServer = useCallback(async () => {
+  const handleToggle = useCallback(async () => {
     if (loading) return;
-
     setLoading(true);
-
     try {
       if (serverStatus?.running) {
         await window.go?.main.App.StopServer();
       } else if (selectedInterface) {
         await window.go?.main.App.StartServer(selectedInterface.ip);
       }
-    } catch (err) {
-      console.error('Server toggle failed:', err);
-      setLoading(false);
-    }
+    } catch { setLoading(false); }
   }, [loading, serverStatus, selectedInterface]);
 
-  // Open downloads folder
+  const handleSendToPhone = useCallback(async () => {
+    try { await window.go?.main.App.SendFileToPhone(); } catch (e) { console.error(e); }
+  }, []);
+
   const handleOpenFolder = useCallback(async () => {
-    try {
-      await window.go?.main.App.OpenDownloadsFolder();
-    } catch (err) {
-      console.error('Failed to open folder:', err);
-    }
+    try { await window.go?.main.App.OpenDownloadsFolder(); } catch {}
   }, []);
 
   const isActive = serverStatus?.running ?? false;
 
+  // Drag & Drop handlers
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+  const handleDragLeave = () => setIsDragOver(false);
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    // Future: handle dropped files
+  };
+
   return (
-    <div className="h-full flex flex-col bg-zinc-950/95 backdrop-blur-sm rounded-lg overflow-hidden border border-white/5">
+    <div 
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      className={`
+        h-full flex flex-col
+        bg-void-black
+        rounded-xl overflow-hidden
+        border-2 transition-all duration-300
+        ${isDragOver 
+          ? 'border-aero-cyan shadow-glow-cyan-lg' 
+          : 'border-void-border'}
+      `}
+    >
       <TitleBar />
 
-      <div className="flex-1 flex flex-col px-4 py-3 gap-4 overflow-hidden">
+      <div className="flex-1 flex flex-col px-5 py-5 gap-6 overflow-hidden">
         {/* Network Selector */}
         <NetworkSelector
           interfaces={interfaces}
@@ -488,58 +560,25 @@ function App() {
           disabled={isActive}
         />
 
-        {/* QR Code */}
-        <QRCodeSection url={serverStatus?.url ?? ''} active={isActive} />
+        {/* Zone A: QR / Receive */}
+        <QRZone url={serverStatus?.url ?? ''} active={isActive} />
 
-        {/* Power Button */}
-        <div className="flex justify-center gap-4 items-center">
-          <PowerButton
-            active={isActive}
-            loading={loading}
-            onClick={handleToggleServer}
-          />
-          
-          {/* Send to Phone Button */}
-          {isActive && (
-            <button
-              onClick={async () => {
-                try {
-                  await window.go?.main.App.SendFileToPhone();
-                } catch (err) {
-                  console.error('Failed to send:', err);
-                }
-              }}
-              className="
-                relative w-14 h-14 rounded-full
-                flex items-center justify-center
-                bg-blue-500/20 text-blue-400
-                hover:bg-blue-500/30 transition-all duration-300
-                shadow-lg shadow-blue-500/10
-              "
-              aria-label="Send file to phone"
-            >
-              <Upload className="w-6 h-6" />
-            </button>
-          )}
-        </div>
+        {/* Action Buttons */}
+        <ActionButtons
+          active={isActive}
+          loading={loading}
+          onToggle={handleToggle}
+          onSendToPhone={handleSendToPhone}
+        />
 
-        {/* Section Header */}
-        <div className="flex items-center gap-2 pt-2">
-          <div className="h-px flex-1 bg-white/5" />
-          <span className="text-[10px] uppercase tracking-wider text-zinc-600 font-medium">
-            Recent
-          </span>
-          <div className="h-px flex-1 bg-white/5" />
-        </div>
-
-        {/* Transfer List */}
-        <TransferList transfers={transfers} />
+        {/* Zone B: Recent Files */}
+        <RecentFilesZone transfers={transfers} />
       </div>
 
       <StatusBar
         active={isActive}
-        onOpenFolder={handleOpenFolder}
         soundEnabled={soundEnabled}
+        onOpenFolder={handleOpenFolder}
         onToggleSound={() => setSoundEnabled(!soundEnabled)}
       />
     </div>

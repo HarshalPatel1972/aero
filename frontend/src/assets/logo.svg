@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <!-- Squircle Background -->
+  <rect x="32" y="32" width="448" height="448" rx="96" ry="96" fill="#050505"/>
+  
+  <!-- Stylized "A" as Wind/Paper Plane Stream -->
+  <defs>
+    <linearGradient id="aeroGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00E5FF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#00B4D8;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Main "A" Shape - Abstract wind stream forming an A -->
+  <path 
+    d="M256 96 L384 384 L336 384 L304 304 L208 304 L176 384 L128 384 L256 96 Z M256 176 L224 272 L288 272 L256 176 Z" 
+    fill="url(#aeroGradient)"
+  />
+  
+  <!-- Speed lines / wind trails -->
+  <path 
+    d="M128 192 L96 192" 
+    stroke="#00E5FF" 
+    stroke-width="8" 
+    stroke-linecap="round"
+    opacity="0.6"
+  />
+  <path 
+    d="M144 240 L80 240" 
+    stroke="#00E5FF" 
+    stroke-width="6" 
+    stroke-linecap="round"
+    opacity="0.4"
+  />
+  <path 
+    d="M136 288 L104 288" 
+    stroke="#00E5FF" 
+    stroke-width="4" 
+    stroke-linecap="round"
+    opacity="0.3"
+  />
+</svg>
