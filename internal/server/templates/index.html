@@ -8,13 +8,15 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg: #030303;
-            --accent: #22c55e;
-            --accent-dim: rgba(34, 197, 94, 0.12);
-            --accent-blue: #3b82f6;
-            --accent-blue-dim: rgba(59, 130, 246, 0.12);
-            --text: #fff;
-            --text-dim: rgba(255, 255, 255, 0.4);
+            --green: #00ff88;
+            --green-glow: rgba(0, 255, 136, 0.4);
+            --green-dim: rgba(0, 255, 136, 0.1);
+            --blue: #00aaff;
+            --blue-glow: rgba(0, 170, 255, 0.4);
+            --blue-dim: rgba(0, 170, 255, 0.1);
+            --black: #000000;
+            --white: #ffffff;
+            --dim: rgba(255, 255, 255, 0.4);
         }
 
         * {
@@ -25,82 +27,52 @@
 
         body {
             font-family: 'Outfit', sans-serif;
-            background: var(--bg);
-            color: var(--text);
+            background: var(--black);
+            color: var(--white);
             min-height: 100vh;
             min-height: 100dvh;
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 32px 20px;
+            justify-content: center;
+            padding: 32px 24px;
             -webkit-font-smoothing: antialiased;
-            overflow-x: hidden;
-        }
-
-        /* Animated mesh gradient background */
-        .mesh-bg {
-            position: fixed;
-            inset: 0;
-            background:
-                radial-gradient(ellipse at 20% 20%, rgba(34, 197, 94, 0.08) 0%, transparent 50%),
-                radial-gradient(ellipse at 80% 80%, rgba(59, 130, 246, 0.05) 0%, transparent 50%),
-                radial-gradient(ellipse at 50% 50%, rgba(255, 255, 255, 0.02) 0%, transparent 60%);
-            animation: meshMove 20s ease-in-out infinite;
-            pointer-events: none;
-        }
-
-        @keyframes meshMove {
-
-            0%,
-            100% {
-                transform: scale(1) translate(0, 0);
-            }
-
-            25% {
-                transform: scale(1.05) translate(10px, -10px);
-            }
-
-            50% {
-                transform: scale(1) translate(-5px, 5px);
-            }
-
-            75% {
-                transform: scale(1.02) translate(5px, 10px);
-            }
+            overflow: hidden;
         }
 
         .container {
-            position: relative;
-            z-index: 1;
             display: flex;
             flex-direction: column;
             align-items: center;
             width: 100%;
-            max-width: 340px;
+            max-width: 320px;
         }
 
-        /* SACRED LOGO - NEVER CHANGE */
+        /* ═══════════════════════════════════════════
+           SACRED LOGO - NEVER CHANGE
+           ═══════════════════════════════════════════ */
         .logo {
             font-size: 2rem;
             font-weight: 600;
             letter-spacing: -0.03em;
-            margin-bottom: 40px;
+            margin-bottom: 48px;
         }
 
         .logo-dot {
             display: inline-block;
             width: 7px;
             height: 7px;
-            background: var(--accent);
+            background: var(--green);
             border-radius: 50%;
             margin-left: 1px;
             vertical-align: super;
             animation: pulse 2s ease-in-out infinite;
-            transition: background 0.3s ease;
+            box-shadow: 0 0 10px var(--green-glow);
         }
 
         .logo-dot.receive {
-            background: var(--accent-blue);
+            background: var(--blue);
+            box-shadow: 0 0 10px var(--blue-glow);
         }
 
         @keyframes pulse {
@@ -112,285 +84,169 @@
             }
 
             50% {
-                opacity: 0.5;
-                transform: scale(0.85);
+                opacity: 0.6;
+                transform: scale(0.8);
             }
         }
 
-        /* THE PORTAL - Unique morphing shape */
-        .portal {
+        /* ═══════════════════════════════════════════
+           THE ORB - Clean, Centered, Vibrant
+           ═══════════════════════════════════════════ */
+        .orb {
             position: relative;
-            width: 180px;
-            height: 180px;
+            width: 200px;
+            height: 200px;
             cursor: pointer;
-            transition: transform 0.3s ease;
         }
 
-        .portal:hover {
-            transform: scale(1.03);
-        }
-
-        .portal:active {
-            transform: scale(0.97);
-        }
-
-        /* Morphing blob background */
-        .blob {
+        /* Glow behind */
+        .orb-glow {
             position: absolute;
-            inset: -20px;
-            background: linear-gradient(135deg, var(--accent-dim), transparent);
-            border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+            inset: -30px;
+            background: radial-gradient(circle, var(--green-glow) 0%, transparent 70%);
+            border-radius: 50%;
             opacity: 0.5;
-            animation: morph 8s ease-in-out infinite;
+            animation: glow-pulse 3s ease-in-out infinite;
             transition: background 0.5s ease;
         }
 
-        .blob.receive {
-            background: linear-gradient(135deg, var(--accent-blue-dim), transparent);
+        .orb-glow.receive {
+            background: radial-gradient(circle, var(--blue-glow) 0%, transparent 70%);
         }
 
-        @keyframes morph {
+        @keyframes glow-pulse {
 
             0%,
             100% {
-                border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
-            }
-
-            25% {
-                border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%;
+                transform: scale(1);
+                opacity: 0.4;
             }
 
             50% {
-                border-radius: 50% 60% 30% 60% / 30% 40% 70% 50%;
-            }
-
-            75% {
-                border-radius: 40% 30% 60% 50% / 60% 70% 30% 40%;
+                transform: scale(1.1);
+                opacity: 0.6;
             }
         }
 
-        /* Outer ring with gradient stroke */
-        .outer-ring {
+        /* Outer ring */
+        .orb-ring {
             position: absolute;
             inset: 0;
+            border: 2px solid rgba(255, 255, 255, 0.08);
             border-radius: 50%;
-            background: conic-gradient(from 0deg, var(--accent), transparent, var(--accent));
-            opacity: 0;
-            animation: none;
-            transition: opacity 0.5s ease;
+            transition: border-color 0.3s ease;
         }
 
-        .outer-ring::before {
-            content: '';
-            position: absolute;
-            inset: 2px;
-            border-radius: 50%;
-            background: var(--bg);
-        }
-
-        .portal.active .outer-ring {
-            opacity: 0.6;
-            animation: spinGlow 2s linear infinite;
-        }
-
-        @keyframes spinGlow {
-            to {
-                transform: rotate(360deg);
-            }
+        .orb:hover .orb-ring {
+            border-color: rgba(255, 255, 255, 0.15);
         }
 
         /* Progress ring */
-        .progress-ring {
+        .progress-svg {
             position: absolute;
             inset: 0;
             transform: rotate(-90deg);
         }
 
-        .progress-ring circle {
+        .progress-svg circle {
             fill: none;
             stroke-width: 3;
             stroke-linecap: round;
         }
 
-        .progress-ring .track {
+        .progress-track {
             stroke: rgba(255, 255, 255, 0.05);
         }
 
-        .progress-ring .fill {
-            stroke: var(--accent);
-            stroke-dasharray: 565;
-            stroke-dashoffset: 565;
+        .progress-fill {
+            stroke: var(--green);
+            stroke-dasharray: 628;
+            stroke-dashoffset: 628;
             transition: stroke-dashoffset 0.2s ease, stroke 0.3s ease;
-            filter: drop-shadow(0 0 6px var(--accent));
+            filter: drop-shadow(0 0 8px var(--green));
         }
 
-        .progress-ring .fill.receive {
-            stroke: var(--accent-blue);
-            filter: drop-shadow(0 0 6px var(--accent-blue));
+        .progress-fill.receive {
+            stroke: var(--blue);
+            filter: drop-shadow(0 0 8px var(--blue));
         }
 
-        /* Floating particles */
-        .particles {
+        /* Center content */
+        .orb-center {
             position: absolute;
-            inset: 0;
-            pointer-events: none;
-        }
-
-        .dot {
-            position: absolute;
-            width: 3px;
-            height: 3px;
-            background: var(--accent);
-            border-radius: 50%;
-            opacity: 0;
-            transition: background 0.3s ease;
-        }
-
-        .dot.receive {
-            background: var(--accent-blue);
-        }
-
-        .portal.active .dot {
-            opacity: 1;
-        }
-
-        .dot:nth-child(1) {
-            top: 10%;
-            left: 50%;
-            animation: float1 3s ease-in-out infinite;
-        }
-
-        .dot:nth-child(2) {
-            top: 50%;
-            left: 95%;
-            animation: float2 2.5s ease-in-out infinite 0.5s;
-        }
-
-        .dot:nth-child(3) {
-            top: 90%;
-            left: 50%;
-            animation: float3 2.8s ease-in-out infinite 1s;
-        }
-
-        .dot:nth-child(4) {
-            top: 50%;
-            left: 5%;
-            animation: float4 3.2s ease-in-out infinite 0.3s;
-        }
-
-        @keyframes float1 {
-
-            0%,
-            100% {
-                transform: translateY(0);
-            }
-
-            50% {
-                transform: translateY(10px);
-            }
-        }
-
-        @keyframes float2 {
-
-            0%,
-            100% {
-                transform: translateX(0);
-            }
-
-            50% {
-                transform: translateX(-10px);
-            }
-        }
-
-        @keyframes float3 {
-
-            0%,
-            100% {
-                transform: translateY(0);
-            }
-
-            50% {
-                transform: translateY(-10px);
-            }
-        }
-
-        @keyframes float4 {
-
-            0%,
-            100% {
-                transform: translateX(0);
-            }
-
-            50% {
-                transform: translateX(10px);
-            }
-        }
-
-        /* Inner core */
-        .core {
-            position: absolute;
-            inset: 30px;
-            background: rgba(255, 255, 255, 0.02);
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            border-radius: 50%;
+            inset: 20px;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            backdrop-filter: blur(8px);
-            transition: all 0.4s ease;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 50%;
+            transition: background 0.3s ease;
         }
 
-        .portal:hover .core {
+        .orb:hover .orb-center {
             background: rgba(255, 255, 255, 0.04);
-            border-color: rgba(255, 255, 255, 0.1);
         }
 
-        .portal.success .core {
-            background: var(--accent-dim);
-            border-color: rgba(34, 197, 94, 0.3);
+        .orb.success .orb-center {
+            background: var(--green-dim);
         }
 
-        .core-icon {
-            font-size: 2rem;
+        .orb-icon {
+            font-size: 2.5rem;
             margin-bottom: 4px;
+            transition: transform 0.3s ease, color 0.3s ease;
         }
 
-        .core-text {
-            font-size: 0.65rem;
-            color: var(--text-dim);
+        .orb:hover .orb-icon {
+            transform: translateY(-2px);
+        }
+
+        .orb.success .orb-icon {
+            color: var(--green);
+        }
+
+        .orb.receive .orb-icon {
+            color: var(--blue);
+        }
+
+        .orb-text {
+            font-size: 0.7rem;
+            color: var(--dim);
             text-transform: uppercase;
-            letter-spacing: 0.1em;
+            letter-spacing: 0.15em;
+            font-weight: 400;
         }
 
-        /* Stats */
+        /* ═══════════════════════════════════════════
+           STATS - Only visible during transfer
+           ═══════════════════════════════════════════ */
         .stats {
-            margin-top: 28px;
+            margin-top: 32px;
             text-align: center;
+            height: 80px;
             opacity: 0;
-            transform: translateY(8px);
-            transition: all 0.4s ease;
+            transition: opacity 0.4s ease;
         }
 
         .stats.visible {
             opacity: 1;
-            transform: translateY(0);
         }
 
         .stat-percent {
-            font-size: 2.2rem;
+            font-size: 2.5rem;
             font-weight: 500;
-            color: var(--accent);
+            color: var(--green);
             transition: color 0.3s ease;
         }
 
         .stat-percent.receive {
-            color: var(--accent-blue);
+            color: var(--blue);
         }
 
         .stat-speed {
-            font-size: 0.7rem;
-            color: var(--text-dim);
+            font-size: 0.75rem;
+            color: var(--dim);
             margin-top: 2px;
         }
 
@@ -404,93 +260,73 @@
             text-overflow: ellipsis;
         }
 
-        /* Recents section */
+        /* ═══════════════════════════════════════════
+           RECENTS - Compact history
+           ═══════════════════════════════════════════ */
         .recents {
             width: 100%;
-            margin-top: 32px;
+            margin-top: 24px;
+            max-height: 150px;
+            overflow-y: auto;
         }
 
-        .recents-header {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 12px;
-        }
-
-        .recents-header span {
-            font-size: 0.6rem;
-            color: rgba(255, 255, 255, 0.3);
+        .recent-header {
+            font-size: 0.55rem;
+            color: rgba(255, 255, 255, 0.2);
             text-transform: uppercase;
-            letter-spacing: 0.1em;
-        }
-
-        .recents-header::before,
-        .recents-header::after {
-            content: '';
-            flex: 1;
-            height: 1px;
-            background: rgba(255, 255, 255, 0.06);
+            letter-spacing: 0.15em;
+            margin-bottom: 8px;
+            text-align: center;
         }
 
         .recent-item {
             display: flex;
             align-items: center;
-            gap: 10px;
-            padding: 10px 12px;
+            gap: 8px;
+            padding: 8px 12px;
             background: rgba(255, 255, 255, 0.02);
-            border: 1px solid rgba(255, 255, 255, 0.04);
-            border-radius: 10px;
-            margin-bottom: 6px;
-            animation: slideIn 0.3s ease;
-        }
-
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            border-radius: 8px;
+            margin-bottom: 4px;
         }
 
         .recent-icon {
-            font-size: 1rem;
+            font-size: 0.8rem;
+            width: 20px;
+            text-align: center;
         }
 
-        .recent-info {
-            flex: 1;
-            min-width: 0;
+        .recent-icon.sent {
+            color: var(--green);
+        }
+
+        .recent-icon.received {
+            color: var(--blue);
         }
 
         .recent-name {
-            font-size: 0.75rem;
+            flex: 1;
+            font-size: 0.7rem;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
 
-        .recent-meta {
-            font-size: 0.6rem;
-            color: var(--text-dim);
-        }
-
-        .recent-status {
-            font-size: 0.6rem;
+        .recent-badge {
+            font-size: 0.5rem;
             padding: 2px 6px;
             border-radius: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
         }
 
-        .recent-status.sent {
-            background: var(--accent-dim);
-            color: var(--accent);
+        .recent-badge.sent {
+            background: var(--green-dim);
+            color: var(--green);
         }
 
-        .recent-status.received {
-            background: var(--accent-blue-dim);
-            color: var(--accent-blue);
+        .recent-badge.received {
+            background: var(--blue-dim);
+            color: var(--blue);
         }
 
         input[type="file"] {
@@ -500,30 +336,21 @@
 </head>
 
 <body>
-    <div class="mesh-bg"></div>
-
     <div class="container">
         <h1 class="logo">aero<span class="logo-dot" id="logoDot"></span></h1>
 
-        <div class="portal" id="portal">
-            <div class="blob" id="blob"></div>
-            <div class="outer-ring"></div>
+        <div class="orb" id="orb">
+            <div class="orb-glow" id="orbGlow"></div>
+            <div class="orb-ring"></div>
 
-            <svg class="progress-ring" viewBox="0 0 180 180">
-                <circle class="track" cx="90" cy="90" r="89" />
-                <circle class="fill" id="progressCircle" cx="90" cy="90" r="89" />
+            <svg class="progress-svg" viewBox="0 0 200 200">
+                <circle class="progress-track" cx="100" cy="100" r="99" />
+                <circle class="progress-fill" id="progressFill" cx="100" cy="100" r="99" />
             </svg>
 
-            <div class="particles">
-                <div class="dot" id="d1"></div>
-                <div class="dot" id="d2"></div>
-                <div class="dot" id="d3"></div>
-                <div class="dot" id="d4"></div>
-            </div>
-
-            <div class="core">
-                <div class="core-icon" id="coreIcon">↑</div>
-                <div class="core-text" id="coreText">tap to send</div>
+            <div class="orb-center">
+                <div class="orb-icon" id="orbIcon">↑</div>
+                <div class="orb-text" id="orbText">tap to send</div>
             </div>
         </div>
 
@@ -541,20 +368,23 @@
     <script>
         (function () {
             const $ = id => document.getElementById(id);
-            const portal = $('portal'), fileInput = $('fileInput');
-            const coreIcon = $('coreIcon'), coreText = $('coreText');
+            const orb = $('orb'), fileInput = $('fileInput');
+            const orbIcon = $('orbIcon'), orbText = $('orbText'), orbGlow = $('orbGlow');
+            const logoDot = $('logoDot'), progressFill = $('progressFill');
             const stats = $('stats'), statPercent = $('statPercent'), statSpeed = $('statSpeed'), statFile = $('statFile');
-            const progressCircle = $('progressCircle');
-            const logoDot = $('logoDot'), blob = $('blob');
-            const d1 = $('d1'), d2 = $('d2'), d3 = $('d3'), d4 = $('d4');
             const recentsDiv = $('recents');
-            const circumference = 2 * Math.PI * 89;
 
-            progressCircle.style.strokeDasharray = circumference;
-            progressCircle.style.strokeDashoffset = circumference;
+            const circumference = 2 * Math.PI * 99;
+            progressFill.style.strokeDasharray = circumference;
+            progressFill.style.strokeDashoffset = circumference;
 
-            const recentHistory = [];
+            const recents = [];
             const MAX_RECENTS = 5;
+
+            // State
+            let ws = null;
+            let uploadState = null; // { acked, total, done }
+            let receiveState = null; // { chunks, meta }
 
             const fmt = b => {
                 if (!b) return '0 B';
@@ -563,39 +393,33 @@
             };
 
             const setProgress = pct => {
-                progressCircle.style.strokeDashoffset = circumference - (pct / 100) * circumference;
+                progressFill.style.strokeDashoffset = circumference - (pct / 100) * circumference;
             };
 
             const setMode = mode => {
                 const isReceive = mode === 'receive';
                 logoDot.classList.toggle('receive', isReceive);
-                blob.classList.toggle('receive', isReceive);
-                progressCircle.classList.toggle('receive', isReceive);
+                orbGlow.classList.toggle('receive', isReceive);
+                progressFill.classList.toggle('receive', isReceive);
                 statPercent.classList.toggle('receive', isReceive);
-                [d1, d2, d3, d4].forEach(d => d.classList.toggle('receive', isReceive));
+                orb.classList.toggle('receive', isReceive);
             };
 
-            const addRecent = (name, size, type) => {
-                recentHistory.unshift({ name, size, type, time: new Date() });
-                if (recentHistory.length > MAX_RECENTS) recentHistory.pop();
+            const addRecent = (name, type) => {
+                recents.unshift({ name, type });
+                if (recents.length > MAX_RECENTS) recents.pop();
                 renderRecents();
             };
 
             const renderRecents = () => {
-                if (recentHistory.length === 0) {
-                    recentsDiv.innerHTML = '';
-                    return;
-                }
+                if (recents.length === 0) { recentsDiv.innerHTML = ''; return; }
                 recentsDiv.innerHTML = `
-                <div class="recents-header"><span>Recent</span></div>
-                ${recentHistory.map(r => `
+                <div class="recent-header">Recent</div>
+                ${recents.map(r => `
                     <div class="recent-item">
-                        <div class="recent-icon">${r.type === 'sent' ? '↑' : '↓'}</div>
-                        <div class="recent-info">
-                            <div class="recent-name">${r.name}</div>
-                            <div class="recent-meta">${fmt(r.size)}</div>
-                        </div>
-                        <div class="recent-status ${r.type}">${r.type}</div>
+                        <div class="recent-icon ${r.type}">${r.type === 'sent' ? '↑' : '↓'}</div>
+                        <div class="recent-name">${r.name}</div>
+                        <div class="recent-badge ${r.type}">${r.type}</div>
                     </div>
                 `).join('')}
             `;
@@ -603,182 +427,191 @@
 
             const resetToIdle = () => {
                 setMode('send');
-                portal.classList.remove('success', 'active');
-                coreIcon.textContent = '↑';
-                coreText.textContent = 'tap to send';
+                orb.classList.remove('success');
+                orbIcon.textContent = '↑';
+                orbText.textContent = 'tap to send';
                 stats.classList.remove('visible');
                 setProgress(0);
+                uploadState = null;
+                receiveState = null;
             };
 
-            let ws = null;
-            let receiveChunks = [];
-            let receiveMeta = null;
+            // ═══════════════════════════════════════════
+            // SINGLE PERSISTENT MESSAGE ROUTER
+            // ═══════════════════════════════════════════
+            const handleMessage = (e) => {
+                // Binary = chunk data
+                if (e.data instanceof ArrayBuffer) {
+                    if (receiveState) {
+                        const view = new DataView(e.data);
+                        const idx = view.getUint32(0, true);
+                        const data = new Uint8Array(e.data, 4);
+                        receiveState.chunks[idx] = data;
+
+                        const received = receiveState.chunks.filter(c => c).length;
+                        const pct = (received / receiveState.meta.chunks) * 100;
+                        setProgress(Math.min(99, pct));
+                        statPercent.textContent = Math.round(pct) + '%';
+
+                        ws.send(JSON.stringify({ ack: idx }));
+                    }
+                    return;
+                }
+
+                // Text = JSON message
+                try {
+                    const msg = JSON.parse(e.data);
+
+                    // Server ready for upload
+                    if (msg.status === 'ready' && uploadState) {
+                        uploadState.ready = true;
+                    }
+
+                    // ACK from server during upload
+                    if (typeof msg.ack === 'number' && uploadState) {
+                        uploadState.acked++;
+                        const pct = Math.min(99, (uploadState.acked / uploadState.total) * 100);
+                        setProgress(pct);
+                        statPercent.textContent = Math.round(pct) + '%';
+                        statSpeed.textContent = fmt(uploadState.sent / ((Date.now() - uploadState.t0) / 1000)) + '/s';
+
+                        if (uploadState.acked >= uploadState.total && uploadState.doneResolve) {
+                            uploadState.doneResolve();
+                        }
+                    }
+
+                    // Upload complete confirmation
+                    if (msg.status === 'success' && uploadState) {
+                        setProgress(100);
+                        statPercent.textContent = '100%';
+                        orb.classList.add('success');
+                        orbIcon.textContent = '✓';
+                        orbText.textContent = 'sent';
+                        const sec = ((Date.now() - uploadState.t0) / 1000).toFixed(1);
+                        statSpeed.textContent = sec + 's';
+                        addRecent(uploadState.name, 'sent');
+                        setTimeout(resetToIdle, 2000);
+                    }
+
+                    // Incoming file from PC
+                    if (msg.type === 'file_incoming') {
+                        receiveState = {
+                            meta: { name: msg.name, size: msg.size, chunks: msg.chunks },
+                            chunks: new Array(msg.chunks)
+                        };
+                        setMode('receive');
+                        stats.classList.add('visible');
+                        orbIcon.textContent = '↓';
+                        orbText.textContent = 'receiving';
+                        statFile.textContent = msg.name;
+                        statPercent.textContent = '0%';
+                        statSpeed.textContent = 'from PC...';
+                        setProgress(0);
+                    }
+
+                    // File complete from PC
+                    if (msg.type === 'file_complete' && receiveState) {
+                        const blob = new Blob(receiveState.chunks);
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = receiveState.meta.name;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+
+                        setProgress(100);
+                        statPercent.textContent = '100%';
+                        orb.classList.add('success');
+                        orbIcon.textContent = '✓';
+                        orbText.textContent = 'saved';
+                        statSpeed.textContent = 'downloaded';
+                        addRecent(receiveState.meta.name, 'received');
+                        setTimeout(resetToIdle, 2000);
+                    }
+
+                } catch (err) {
+                    console.error('Parse error:', err);
+                }
+            };
 
             const connect = () => {
                 ws = new WebSocket(`ws://${location.host}/transfer`);
                 ws.binaryType = 'arraybuffer';
-
-                ws.onopen = () => console.log('Connected');
-
-                ws.onmessage = e => {
-                    if (typeof e.data === 'string') {
-                        try {
-                            const msg = JSON.parse(e.data);
-                            console.log('Received:', msg);
-
-                            // Incoming file from PC
-                            if (msg.type === 'file_incoming') {
-                                receiveMeta = { name: msg.name, size: msg.size, chunks: msg.chunks };
-                                receiveChunks = new Array(msg.chunks);
-                                setMode('receive');
-                                portal.classList.add('active');
-                                portal.classList.remove('success');
-                                stats.classList.add('visible');
-                                coreIcon.textContent = '↓';
-                                coreText.textContent = 'receiving';
-                                statFile.textContent = msg.name;
-                                statPercent.textContent = '0%';
-                                statSpeed.textContent = 'from PC...';
-                                setProgress(0);
-                            }
-
-                            // File complete from PC
-                            if (msg.type === 'file_complete') {
-                                const blob = new Blob(receiveChunks);
-                                const url = URL.createObjectURL(blob);
-                                const a = document.createElement('a');
-                                a.href = url;
-                                a.download = receiveMeta.name;
-                                document.body.appendChild(a);
-                                a.click();
-                                document.body.removeChild(a);
-                                URL.revokeObjectURL(url);
-
-                                setProgress(100);
-                                statPercent.textContent = '100%';
-                                portal.classList.remove('active');
-                                portal.classList.add('success');
-                                coreIcon.textContent = '✓';
-                                coreText.textContent = 'saved';
-                                statSpeed.textContent = 'downloaded';
-
-                                addRecent(receiveMeta.name, receiveMeta.size, 'received');
-                                setTimeout(resetToIdle, 2500);
-                                receiveChunks = [];
-                                receiveMeta = null;
-                            }
-                        } catch (err) { console.error('Parse error:', err); }
-                    } else if (e.data instanceof ArrayBuffer) {
-                        // Receiving chunk from PC
-                        if (receiveMeta) {
-                            const view = new DataView(e.data);
-                            const idx = view.getUint32(0, true);
-                            const data = new Uint8Array(e.data, 4);
-                            receiveChunks[idx] = data;
-
-                            const received = receiveChunks.filter(c => c).length;
-                            const pct = (received / receiveMeta.chunks) * 100;
-                            setProgress(Math.min(99, pct));
-                            statPercent.textContent = Math.round(pct) + '%';
-
-                            ws.send(JSON.stringify({ ack: idx }));
-                        }
-                    }
-                };
-
-                ws.onclose = () => {
-                    console.log('Disconnected, reconnecting...');
-                    setTimeout(connect, 2000);
-                };
-
-                ws.onerror = e => console.error('WS error:', e);
+                ws.onmessage = handleMessage; // SINGLE PERSISTENT HANDLER
+                ws.onclose = () => setTimeout(connect, 2000);
             };
 
             connect();
-            portal.onclick = () => fileInput.click();
+            orb.onclick = () => fileInput.click();
 
+            // ═══════════════════════════════════════════
+            // UPLOAD FUNCTION
+            // ═══════════════════════════════════════════
             async function upload(file) {
-                const t0 = Date.now();
                 const CHUNK = 1024 * 1024;
                 const total = Math.ceil(file.size / CHUNK);
-                let acked = 0, sent = 0;
+
+                uploadState = {
+                    name: file.name,
+                    total,
+                    acked: 0,
+                    sent: 0,
+                    t0: Date.now(),
+                    ready: false,
+                    doneResolve: null
+                };
 
                 setMode('send');
-                portal.classList.add('active');
-                portal.classList.remove('success');
+                orb.classList.remove('success');
                 stats.classList.add('visible');
-                coreIcon.textContent = '↑';
-                coreText.textContent = 'sending';
+                orbIcon.textContent = '↑';
+                orbText.textContent = 'sending';
                 statFile.textContent = file.name;
                 statPercent.textContent = '0%';
                 statSpeed.textContent = 'connecting...';
                 setProgress(0);
 
                 try {
+                    // Send init
                     ws.send(JSON.stringify({ name: file.name, size: file.size, chunks: total }));
 
+                    // Wait for ready
                     await new Promise(r => {
-                        const handler = e => {
-                            try { if (JSON.parse(e.data).status === 'ready') { ws.removeEventListener('message', handler); r(); } } catch { }
-                        };
-                        ws.addEventListener('message', handler);
+                        const check = () => uploadState.ready ? r() : setTimeout(check, 10);
+                        check();
+                        setTimeout(r, 10000); // Timeout
                     });
 
                     statSpeed.textContent = 'transferring...';
 
-                    let done;
-                    const ackHandler = e => {
-                        try {
-                            const m = JSON.parse(e.data);
-                            if (typeof m.ack === 'number') {
-                                acked++;
-                                const p = Math.min(99, (acked / total) * 100);
-                                const s = sent / ((Date.now() - t0) / 1000);
-                                setProgress(p);
-                                statPercent.textContent = Math.round(p) + '%';
-                                statSpeed.textContent = fmt(s) + '/s';
-                                if (done && acked >= total) done();
-                            } else if (m.status && done) done(m);
-                        } catch { }
-                    };
-                    ws.addEventListener('message', ackHandler);
-
+                    // Send all chunks
                     for (let i = 0; i < total; i++) {
                         const d = await file.slice(i * CHUNK, Math.min((i + 1) * CHUNK, file.size)).arrayBuffer();
-                        const h = new ArrayBuffer(4); new DataView(h).setUint32(0, i, true);
+                        const h = new ArrayBuffer(4);
+                        new DataView(h).setUint32(0, i, true);
                         const c = new Uint8Array(4 + d.byteLength);
-                        c.set(new Uint8Array(h), 0); c.set(new Uint8Array(d), 4);
-                        ws.send(c); sent += d.byteLength;
+                        c.set(new Uint8Array(h), 0);
+                        c.set(new Uint8Array(d), 4);
+                        ws.send(c);
+                        uploadState.sent += d.byteLength;
                     }
 
+                    // Wait for all ACKs
                     statSpeed.textContent = 'verifying...';
-                    await new Promise(r => { done = r; if (acked >= total) r(); setTimeout(r, 60000); });
-
-                    ws.send(JSON.stringify({ done: true }));
                     await new Promise(r => {
-                        const h = e => { try { if (JSON.parse(e.data).status) { ws.removeEventListener('message', h); r(); } } catch { } };
-                        ws.addEventListener('message', h);
-                        setTimeout(r, 30000);
+                        uploadState.doneResolve = r;
+                        if (uploadState.acked >= total) r();
+                        setTimeout(r, 60000);
                     });
 
-                    ws.removeEventListener('message', ackHandler);
-
-                    setProgress(100);
-                    statPercent.textContent = '100%';
-                    portal.classList.remove('active');
-                    portal.classList.add('success');
-                    coreIcon.textContent = '✓';
-                    coreText.textContent = 'complete';
-                    const sec = ((Date.now() - t0) / 1000).toFixed(1);
-                    statSpeed.textContent = sec + 's • ' + fmt(file.size / sec) + '/s';
-
-                    addRecent(file.name, file.size, 'sent');
-                    setTimeout(resetToIdle, 2500);
+                    // Signal done
+                    ws.send(JSON.stringify({ done: true }));
 
                 } catch (e) {
-                    portal.classList.remove('active');
-                    coreIcon.textContent = '✗';
-                    coreText.textContent = 'failed';
+                    orbIcon.textContent = '✗';
+                    orbText.textContent = 'failed';
                     statSpeed.textContent = e.message;
                     setTimeout(resetToIdle, 3000);
                 }
