@@ -4,31 +4,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AERO</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <title>aero</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg: #050505;
-            --text: #ffffff;
-            --text-soft: rgba(255, 255, 255, 0.6);
-            --text-muted: rgba(255, 255, 255, 0.35);
             --accent: #22c55e;
-            --accent-soft: rgba(34, 197, 94, 0.12);
-            --glass: rgba(255, 255, 255, 0.03);
-            --glass-border: rgba(255, 255, 255, 0.06);
-            --radius: 24px;
+            --accent-dim: rgba(34, 197, 94, 0.15);
+            --text: #fff;
+            --text-dim: rgba(255, 255, 255, 0.4);
         }
 
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-        }
-
-        html,
-        body {
-            height: 100%;
         }
 
         body {
@@ -38,27 +28,27 @@
             min-height: 100vh;
             min-height: 100dvh;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
             padding: 32px 24px;
-            overflow: hidden;
             -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
+            overflow: hidden;
         }
 
-        /* Animated ambient glow */
+        /* Ambient glow */
         .ambient {
             position: fixed;
+            width: 500px;
+            height: 500px;
             top: 50%;
             left: 50%;
-            width: 600px;
-            height: 600px;
             transform: translate(-50%, -50%);
-            background: radial-gradient(circle, var(--accent-soft) 0%, transparent 70%);
+            background: radial-gradient(circle, var(--accent-dim), transparent 70%);
+            filter: blur(60px);
             opacity: 0.5;
-            filter: blur(80px);
+            animation: breathe 6s ease-in-out infinite;
             pointer-events: none;
-            animation: breathe 8s ease-in-out infinite;
         }
 
         @keyframes breathe {
@@ -70,38 +60,36 @@
             }
 
             50% {
-                transform: translate(-50%, -50%) scale(1.1);
+                transform: translate(-50%, -50%) scale(1.15);
                 opacity: 0.6;
             }
         }
 
         .container {
-            width: 100%;
-            max-width: 360px;
             position: relative;
             z-index: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 340px;
         }
 
         /* Logo */
-        .logo-section {
-            text-align: center;
-            margin-bottom: 48px;
-        }
-
         .logo {
-            font-size: 2.5rem;
+            font-size: 2.2rem;
             font-weight: 600;
-            letter-spacing: -0.04em;
-            margin-bottom: 8px;
+            letter-spacing: -0.03em;
+            margin-bottom: 48px;
         }
 
         .logo-dot {
             display: inline-block;
-            width: 8px;
-            height: 8px;
+            width: 7px;
+            height: 7px;
             background: var(--accent);
             border-radius: 50%;
-            margin-left: 2px;
+            margin-left: 1px;
             vertical-align: super;
             animation: pulse 2s ease-in-out infinite;
         }
@@ -116,302 +104,199 @@
 
             50% {
                 opacity: 0.5;
-                transform: scale(0.9);
+                transform: scale(0.85);
             }
         }
 
-        .tagline {
-            font-size: 0.85rem;
-            font-weight: 300;
-            color: var(--text-muted);
-            letter-spacing: 0.08em;
-        }
-
-        /* Drop Zone */
-        .drop-zone {
-            background: var(--glass);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border: 1px solid var(--glass-border);
-            border-radius: var(--radius);
-            padding: 56px 32px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        /* Central Orb - The main interaction area */
+        .orb-container {
             position: relative;
+            width: 200px;
+            height: 200px;
+            cursor: pointer;
         }
 
-        .drop-zone::before {
-            content: '';
+        /* Orbital rings */
+        .ring {
+            position: absolute;
+            border-radius: 50%;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .ring-1 {
+            inset: 0;
+        }
+
+        .ring-2 {
+            inset: 20px;
+        }
+
+        .ring-3 {
+            inset: 40px;
+        }
+
+        .orb-container:hover .ring {
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Progress ring - SVG circle */
+        .progress-ring {
             position: absolute;
             inset: 0;
-            border-radius: var(--radius);
-            padding: 1px;
-            background: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
-            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            -webkit-mask-composite: xor;
-            mask-composite: exclude;
-            pointer-events: none;
+            transform: rotate(-90deg);
         }
 
-        .drop-zone:hover {
-            transform: translateY(-4px);
-            border-color: rgba(255, 255, 255, 0.1);
-            box-shadow: 0 20px 40px -20px rgba(0, 0, 0, 0.5);
+        .progress-ring circle {
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
         }
 
-        .drop-zone.dragover {
-            border-color: var(--accent);
-            background: var(--accent-soft);
+        .progress-ring .track {
+            stroke: rgba(255, 255, 255, 0.05);
         }
 
-        .drop-zone.active {
-            pointer-events: none;
-            transform: scale(0.98);
+        .progress-ring .fill {
+            stroke: var(--accent);
+            stroke-dasharray: 628;
+            stroke-dashoffset: 628;
+            transition: stroke-dashoffset 0.3s ease;
+            filter: drop-shadow(0 0 8px var(--accent));
         }
 
-        .upload-icon {
-            width: 64px;
-            height: 64px;
-            margin: 0 auto 20px;
-            border-radius: 20px;
-            background: linear-gradient(135deg, var(--accent-soft) 0%, transparent 100%);
-            border: 1px solid rgba(34, 197, 94, 0.15);
+        /* Center content */
+        .orb-center {
+            position: absolute;
+            inset: 40px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 50%;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
+            transition: all 0.4s ease;
+        }
+
+        .orb-container:hover .orb-center {
+            background: rgba(255, 255, 255, 0.04);
+            transform: scale(1.02);
+        }
+
+        .orb-icon {
+            font-size: 2rem;
+            margin-bottom: 8px;
             transition: transform 0.3s ease;
         }
 
-        .upload-icon svg {
-            width: 28px;
-            height: 28px;
-            stroke: var(--accent);
-            stroke-width: 1.5;
-            fill: none;
-        }
-
-        .drop-zone:hover .upload-icon {
+        .orb-container:hover .orb-icon {
             transform: translateY(-4px);
         }
 
-        .drop-title {
-            font-size: 1.1rem;
-            font-weight: 500;
-            margin-bottom: 6px;
+        .orb-text {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            font-weight: 300;
         }
 
-        .drop-subtitle {
+        /* Transferring state - orbiting particle */
+        .particle {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: var(--accent);
+            border-radius: 50%;
+            box-shadow: 0 0 12px var(--accent), 0 0 24px var(--accent);
+            opacity: 0;
+            top: 50%;
+            left: 50%;
+            margin: -3px 0 0 -3px;
+        }
+
+        .orb-container.transferring .particle {
+            opacity: 1;
+            animation: orbit 1.5s linear infinite;
+        }
+
+        @keyframes orbit {
+            from {
+                transform: rotate(0deg) translateX(100px) rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg) translateX(100px) rotate(-360deg);
+            }
+        }
+
+        /* Second particle, offset */
+        .particle-2 {
+            animation-delay: 0.5s !important;
+        }
+
+        .particle-3 {
+            animation-delay: 1s !important;
+        }
+
+        /* Stats below orb */
+        .stats {
+            margin-top: 32px;
+            text-align: center;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.4s ease;
+        }
+
+        .stats.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .stat-percent {
+            font-size: 2rem;
+            font-weight: 500;
+            color: var(--accent);
+        }
+
+        .stat-speed {
             font-size: 0.8rem;
-            color: var(--text-muted);
+            color: var(--text-dim);
+            margin-top: 4px;
             font-weight: 300;
+        }
+
+        .stat-file {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            margin-top: 12px;
+            max-width: 200px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Success state */
+        .orb-container.success .orb-center {
+            background: var(--accent-dim);
+            border-color: rgba(34, 197, 94, 0.3);
+        }
+
+        .orb-container.success .orb-icon {
+            color: var(--accent);
+        }
+
+        /* Footer */
+        .footer {
+            position: fixed;
+            bottom: 24px;
+            font-size: 0.65rem;
+            color: var(--text-dim);
+            letter-spacing: 0.05em;
+            opacity: 0.6;
         }
 
         input[type="file"] {
             display: none;
-        }
-
-        /* Transfer Section */
-        .transfer-section {
-            display: none;
-            margin-top: 28px;
-            animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        .transfer-section.visible {
-            display: block;
-        }
-
-        @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .file-card {
-            background: var(--glass);
-            border: 1px solid var(--glass-border);
-            border-radius: 16px;
-            padding: 18px 20px;
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-
-        .file-thumb {
-            width: 48px;
-            height: 48px;
-            border-radius: 14px;
-            background: linear-gradient(135deg, #1a1a1a, #0a0a0a);
-            border: 1px solid var(--glass-border);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.4rem;
-            flex-shrink: 0;
-        }
-
-        .file-meta {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .file-name {
-            font-size: 0.9rem;
-            font-weight: 500;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            margin-bottom: 3px;
-        }
-
-        .file-size {
-            font-size: 0.75rem;
-            color: var(--text-muted);
-            font-weight: 300;
-        }
-
-        /* Progress */
-        .progress-container {
-            margin-top: 20px;
-        }
-
-        .progress-track {
-            height: 3px;
-            background: rgba(255, 255, 255, 0.08);
-            border-radius: 2px;
-            overflow: hidden;
-        }
-
-        .progress-bar {
-            height: 100%;
-            width: 0%;
-            background: linear-gradient(90deg, var(--accent), #4ade80);
-            border-radius: 2px;
-            transition: width 0.2s ease;
-            position: relative;
-        }
-
-        .progress-bar::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            right: 0;
-            bottom: 0;
-            left: 0;
-            background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.2) 50%, transparent 100%);
-            animation: shimmer 1.5s infinite;
-        }
-
-        @keyframes shimmer {
-            0% {
-                transform: translateX(-100%);
-            }
-
-            100% {
-                transform: translateX(100%);
-            }
-        }
-
-        .progress-info {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 12px;
-            font-size: 0.75rem;
-        }
-
-        .progress-percent {
-            font-weight: 500;
-            color: var(--accent);
-        }
-
-        .progress-speed {
-            color: var(--text-muted);
-            font-weight: 300;
-        }
-
-        /* Status */
-        .status {
-            display: none;
-            margin-top: 24px;
-            padding: 20px;
-            border-radius: 18px;
-            text-align: center;
-            animation: popIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        @keyframes popIn {
-            0% {
-                opacity: 0;
-                transform: scale(0.9);
-            }
-
-            100% {
-                opacity: 1;
-                transform: scale(1);
-            }
-        }
-
-        .status.visible {
-            display: block;
-        }
-
-        .status.success {
-            background: linear-gradient(135deg, var(--accent-soft), transparent);
-            border: 1px solid rgba(34, 197, 94, 0.15);
-        }
-
-        .status.error {
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), transparent);
-            border: 1px solid rgba(239, 68, 68, 0.15);
-        }
-
-        .status-icon {
-            font-size: 2rem;
-            margin-bottom: 8px;
-        }
-
-        .status-message {
-            font-size: 0.9rem;
-            font-weight: 400;
-        }
-
-        .status.success .status-message {
-            color: var(--accent);
-        }
-
-        .status.error .status-message {
-            color: #ef4444;
-        }
-
-        /* Trust Badge */
-        .trust-section {
-            margin-top: 40px;
-            text-align: center;
-        }
-
-        .trust-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 0.7rem;
-            color: var(--text-muted);
-            font-weight: 300;
-            letter-spacing: 0.02em;
-        }
-
-        .trust-dot {
-            width: 4px;
-            height: 4px;
-            background: var(--text-muted);
-            border-radius: 50%;
         }
     </style>
 </head>
@@ -420,69 +305,50 @@
     <div class="ambient"></div>
 
     <div class="container">
-        <section class="logo-section">
-            <h1 class="logo">aero<span class="logo-dot"></span></h1>
-            <p class="tagline">INSTANT FILE TRANSFER</p>
-        </section>
+        <h1 class="logo">aero<span class="logo-dot"></span></h1>
 
-        <div class="drop-zone" id="dropZone">
-            <div class="upload-icon">
-                <svg viewBox="0 0 24 24">
-                    <path d="M12 15V3m0 0l-4 4m4-4l4 4" />
-                    <path d="M2 17l.621 2.485A2 2 0 004.561 21h14.878a2 2 0 001.94-1.515L22 17" />
-                </svg>
-            </div>
-            <div class="drop-title">Drop your file</div>
-            <div class="drop-subtitle">or tap to select</div>
-        </div>
-        <input type="file" id="fileInput" accept="*/*">
+        <div class="orb-container" id="orb">
+            <div class="ring ring-1"></div>
+            <div class="ring ring-2"></div>
+            <div class="ring ring-3"></div>
 
-        <div class="transfer-section" id="transferSection">
-            <div class="file-card">
-                <div class="file-thumb">📄</div>
-                <div class="file-meta">
-                    <div class="file-name" id="fileName">—</div>
-                    <div class="file-size" id="fileSize">—</div>
-                </div>
-            </div>
-            <div class="progress-container">
-                <div class="progress-track">
-                    <div class="progress-bar" id="progressBar"></div>
-                </div>
-                <div class="progress-info">
-                    <span class="progress-percent" id="progressPercent">0%</span>
-                    <span class="progress-speed" id="progressSpeed">Preparing...</span>
-                </div>
+            <svg class="progress-ring" viewBox="0 0 200 200">
+                <circle class="track" cx="100" cy="100" r="99" />
+                <circle class="fill" id="progressCircle" cx="100" cy="100" r="99" />
+            </svg>
+
+            <div class="particle"></div>
+            <div class="particle particle-2"></div>
+            <div class="particle particle-3"></div>
+
+            <div class="orb-center">
+                <div class="orb-icon" id="orbIcon">↑</div>
+                <div class="orb-text" id="orbText">tap to send</div>
             </div>
         </div>
 
-        <div class="status" id="statusBox">
-            <div class="status-icon" id="statusIcon"></div>
-            <div class="status-message" id="statusMessage"></div>
-        </div>
-
-        <div class="trust-section">
-            <div class="trust-badge">
-                <span>Local network</span>
-                <span class="trust-dot"></span>
-                <span>No cloud</span>
-                <span class="trust-dot"></span>
-                <span>Private</span>
-            </div>
+        <div class="stats" id="stats">
+            <div class="stat-percent" id="statPercent">0%</div>
+            <div class="stat-speed" id="statSpeed">—</div>
+            <div class="stat-file" id="statFile">—</div>
         </div>
     </div>
 
+    <div class="footer">LOCAL • PRIVATE • INSTANT</div>
+
+    <input type="file" id="fileInput" accept="*/*">
+
     <script>
         (function () {
-            'use strict';
             const $ = id => document.getElementById(id);
-            const dropZone = $('dropZone'), fileInput = $('fileInput');
-            const transferSection = $('transferSection'), progressBar = $('progressBar');
-            const progressPercent = $('progressPercent'), progressSpeed = $('progressSpeed');
-            const fileName = $('fileName'), fileSize = $('fileSize');
-            const statusBox = $('statusBox'), statusIcon = $('statusIcon'), statusMessage = $('statusMessage');
+            const orb = $('orb'), fileInput = $('fileInput');
+            const orbIcon = $('orbIcon'), orbText = $('orbText');
+            const stats = $('stats'), statPercent = $('statPercent'), statSpeed = $('statSpeed'), statFile = $('statFile');
+            const progressCircle = $('progressCircle');
+            const circumference = 2 * Math.PI * 99;
 
-            const CHUNK_SIZE = 1024 * 1024;
+            progressCircle.style.strokeDasharray = circumference;
+            progressCircle.style.strokeDashoffset = circumference;
 
             const fmt = b => {
                 if (!b) return '0 B';
@@ -490,36 +356,38 @@
                 return (b / Math.pow(1024, i)).toFixed(1) + ' ' + ['B', 'KB', 'MB', 'GB'][i];
             };
 
-            const showStatus = (type, icon, msg) => {
-                statusBox.className = 'status visible ' + type;
-                statusIcon.textContent = icon;
-                statusMessage.textContent = msg;
+            const setProgress = (pct) => {
+                const offset = circumference - (pct / 100) * circumference;
+                progressCircle.style.strokeDashoffset = offset;
             };
+
+            orb.onclick = () => fileInput.click();
 
             async function upload(file) {
                 const t0 = Date.now();
-                dropZone.classList.add('active');
-                transferSection.classList.add('visible');
-                statusBox.classList.remove('visible');
-
-                fileName.textContent = file.name;
-                fileSize.textContent = fmt(file.size);
-                progressBar.style.width = '0%';
-                progressPercent.textContent = '0%';
-                progressSpeed.textContent = 'Connecting...';
-
-                const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+                const CHUNK = 1024 * 1024;
+                const total = Math.ceil(file.size / CHUNK);
                 let acked = 0, sent = 0;
+
+                orb.classList.add('transferring');
+                orb.classList.remove('success');
+                stats.classList.add('visible');
+                orbIcon.textContent = '↑';
+                orbText.textContent = 'sending';
+                statFile.textContent = file.name;
+                statPercent.textContent = '0%';
+                statSpeed.textContent = 'connecting...';
+                setProgress(0);
 
                 try {
                     const ws = new WebSocket(`ws://${location.host}/transfer`);
                     ws.binaryType = 'arraybuffer';
-                    await new Promise((res, rej) => { ws.onopen = res; ws.onerror = rej; });
+                    await new Promise((r, j) => { ws.onopen = r; ws.onerror = j; });
 
-                    ws.send(JSON.stringify({ name: file.name, size: file.size, chunks: totalChunks }));
-                    await new Promise(res => { ws.onmessage = e => { if (JSON.parse(e.data).status === 'ready') res(); }; });
+                    ws.send(JSON.stringify({ name: file.name, size: file.size, chunks: total }));
+                    await new Promise(r => { ws.onmessage = e => { if (JSON.parse(e.data).status === 'ready') r(); }; });
 
-                    progressSpeed.textContent = 'Transferring...';
+                    statSpeed.textContent = 'transferring...';
 
                     let done;
                     ws.onmessage = e => {
@@ -527,47 +395,48 @@
                             const m = JSON.parse(e.data);
                             if (typeof m.ack === 'number') {
                                 acked++;
-                                const p = (acked / totalChunks) * 100;
+                                const p = Math.min(99, (acked / total) * 100);
                                 const s = sent / ((Date.now() - t0) / 1000);
-                                progressBar.style.width = Math.min(99, p) + '%';
-                                progressPercent.textContent = Math.round(p) + '%';
-                                progressSpeed.textContent = fmt(s) + '/s';
-                                if (done && acked >= totalChunks) done();
+                                setProgress(p);
+                                statPercent.textContent = Math.round(p) + '%';
+                                statSpeed.textContent = fmt(s) + '/s';
+                                if (done && acked >= total) done();
                             } else if (m.status && done) done(m);
                         } catch { }
                     };
 
-                    for (let i = 0; i < totalChunks; i++) {
-                        const d = await file.slice(i * CHUNK_SIZE, Math.min((i + 1) * CHUNK_SIZE, file.size)).arrayBuffer();
+                    for (let i = 0; i < total; i++) {
+                        const d = await file.slice(i * CHUNK, Math.min((i + 1) * CHUNK, file.size)).arrayBuffer();
                         const h = new ArrayBuffer(4); new DataView(h).setUint32(0, i, true);
                         const c = new Uint8Array(4 + d.byteLength);
                         c.set(new Uint8Array(h), 0); c.set(new Uint8Array(d), 4);
                         ws.send(c); sent += d.byteLength;
                     }
 
-                    progressSpeed.textContent = 'Verifying...';
-                    await new Promise(r => { done = r; if (acked >= totalChunks) r(); setTimeout(r, 60000); });
+                    statSpeed.textContent = 'verifying...';
+                    await new Promise(r => { done = r; if (acked >= total) r(); setTimeout(r, 60000); });
 
                     ws.send(JSON.stringify({ done: true }));
                     await new Promise(r => { ws.onmessage = () => r(); setTimeout(r, 30000); });
                     ws.close();
 
-                    progressBar.style.width = '100%';
-                    progressPercent.textContent = '100%';
+                    setProgress(100);
+                    statPercent.textContent = '100%';
+                    orb.classList.remove('transferring');
+                    orb.classList.add('success');
+                    orbIcon.textContent = '✓';
+                    orbText.textContent = 'complete';
                     const sec = ((Date.now() - t0) / 1000).toFixed(1);
-                    showStatus('success', '✓', `Transferred in ${sec}s`);
+                    statSpeed.textContent = sec + 's • ' + fmt(file.size / sec) + '/s';
 
                 } catch (e) {
-                    showStatus('error', '✗', e.message);
-                } finally {
-                    dropZone.classList.remove('active');
+                    orb.classList.remove('transferring');
+                    orbIcon.textContent = '✗';
+                    orbText.textContent = 'failed';
+                    statSpeed.textContent = e.message;
                 }
             }
 
-            dropZone.onclick = () => fileInput.click();
-            dropZone.ondragover = e => { e.preventDefault(); dropZone.classList.add('dragover'); };
-            dropZone.ondragleave = () => dropZone.classList.remove('dragover');
-            dropZone.ondrop = e => { e.preventDefault(); dropZone.classList.remove('dragover'); if (e.dataTransfer.files[0]) upload(e.dataTransfer.files[0]); };
             fileInput.onchange = () => { if (fileInput.files[0]) upload(fileInput.files[0]); };
         })();
     </script>
