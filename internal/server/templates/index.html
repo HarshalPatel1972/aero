@@ -3,31 +3,36 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>AERO</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --bg: #050505;
+            --text: #ffffff;
+            --text-soft: rgba(255, 255, 255, 0.6);
+            --text-muted: rgba(255, 255, 255, 0.35);
+            --accent: #22c55e;
+            --accent-soft: rgba(34, 197, 94, 0.12);
+            --glass: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.06);
+            --radius: 24px;
+        }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
 
-        :root {
-            --bg: #000000;
-            --surface: rgba(255, 255, 255, 0.03);
-            --surface-hover: rgba(255, 255, 255, 0.06);
-            --border: rgba(255, 255, 255, 0.08);
-            --text: #ffffff;
-            --text-dim: rgba(255, 255, 255, 0.5);
-            --accent: #10b981;
-            --accent-glow: rgba(16, 185, 129, 0.15);
-            --error: #ef4444;
+        html,
+        body {
+            height: 100%;
         }
 
         body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-family: 'Outfit', sans-serif;
             background: var(--bg);
             color: var(--text);
             min-height: 100vh;
@@ -35,142 +40,193 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 24px;
+            padding: 32px 24px;
+            overflow: hidden;
             -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
 
-        /* Subtle gradient background */
-        body::before {
-            content: '';
+        /* Animated ambient glow */
+        .ambient {
             position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background:
-                radial-gradient(ellipse at 50% 0%, rgba(16, 185, 129, 0.08) 0%, transparent 50%),
-                radial-gradient(ellipse at 80% 80%, rgba(59, 130, 246, 0.05) 0%, transparent 40%);
+            top: 50%;
+            left: 50%;
+            width: 600px;
+            height: 600px;
+            transform: translate(-50%, -50%);
+            background: radial-gradient(circle, var(--accent-soft) 0%, transparent 70%);
+            opacity: 0.5;
+            filter: blur(80px);
             pointer-events: none;
+            animation: breathe 8s ease-in-out infinite;
+        }
+
+        @keyframes breathe {
+
+            0%,
+            100% {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 0.4;
+            }
+
+            50% {
+                transform: translate(-50%, -50%) scale(1.1);
+                opacity: 0.6;
+            }
         }
 
         .container {
             width: 100%;
-            max-width: 380px;
+            max-width: 360px;
             position: relative;
             z-index: 1;
         }
 
-        /* Header */
-        .header {
+        /* Logo */
+        .logo-section {
             text-align: center;
-            margin-bottom: 32px;
+            margin-bottom: 48px;
         }
 
         .logo {
-            font-size: 2rem;
+            font-size: 2.5rem;
             font-weight: 600;
-            letter-spacing: -0.03em;
-            margin-bottom: 6px;
+            letter-spacing: -0.04em;
+            margin-bottom: 8px;
         }
 
-        .logo span {
-            background: linear-gradient(135deg, var(--accent), #34d399);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+        .logo-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: var(--accent);
+            border-radius: 50%;
+            margin-left: 2px;
+            vertical-align: super;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.5;
+                transform: scale(0.9);
+            }
         }
 
         .tagline {
-            font-size: 0.75rem;
-            color: var(--text-dim);
-            font-weight: 400;
-            letter-spacing: 0.05em;
-            text-transform: uppercase;
+            font-size: 0.85rem;
+            font-weight: 300;
+            color: var(--text-muted);
+            letter-spacing: 0.08em;
         }
 
         /* Drop Zone */
         .drop-zone {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            padding: 48px 24px;
+            background: var(--glass);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius);
+            padding: 56px 32px;
             text-align: center;
             cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
             position: relative;
-            overflow: hidden;
         }
 
         .drop-zone::before {
             content: '';
             position: absolute;
             inset: 0;
-            background: linear-gradient(180deg, rgba(255, 255, 255, 0.02) 0%, transparent 100%);
+            border-radius: var(--radius);
+            padding: 1px;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
             pointer-events: none;
         }
 
         .drop-zone:hover {
-            background: var(--surface-hover);
-            border-color: rgba(255, 255, 255, 0.12);
-            transform: translateY(-2px);
+            transform: translateY(-4px);
+            border-color: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 40px -20px rgba(0, 0, 0, 0.5);
         }
 
         .drop-zone.dragover {
             border-color: var(--accent);
-            background: var(--accent-glow);
+            background: var(--accent-soft);
         }
 
         .drop-zone.active {
             pointer-events: none;
+            transform: scale(0.98);
         }
 
-        .drop-icon {
-            width: 56px;
-            height: 56px;
-            margin: 0 auto 16px;
-            background: var(--surface-hover);
-            border-radius: 16px;
+        .upload-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 20px;
+            border-radius: 20px;
+            background: linear-gradient(135deg, var(--accent-soft) 0%, transparent 100%);
+            border: 1px solid rgba(34, 197, 94, 0.15);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.5rem;
             transition: transform 0.3s ease;
         }
 
-        .drop-zone:hover .drop-icon {
-            transform: scale(1.05);
+        .upload-icon svg {
+            width: 28px;
+            height: 28px;
+            stroke: var(--accent);
+            stroke-width: 1.5;
+            fill: none;
+        }
+
+        .drop-zone:hover .upload-icon {
+            transform: translateY(-4px);
         }
 
         .drop-title {
-            font-size: 1rem;
+            font-size: 1.1rem;
             font-weight: 500;
-            margin-bottom: 4px;
+            margin-bottom: 6px;
         }
 
         .drop-subtitle {
             font-size: 0.8rem;
-            color: var(--text-dim);
+            color: var(--text-muted);
+            font-weight: 300;
         }
 
         input[type="file"] {
             display: none;
         }
 
-        /* Progress Section */
-        .progress-section {
+        /* Transfer Section */
+        .transfer-section {
             display: none;
-            margin-top: 24px;
+            margin-top: 28px;
+            animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        .progress-section.visible {
+        .transfer-section.visible {
             display: block;
-            animation: fadeIn 0.3s ease;
         }
 
-        @keyframes fadeIn {
+        @keyframes slideUp {
             from {
                 opacity: 0;
-                transform: translateY(10px);
+                transform: translateY(20px);
             }
 
             to {
@@ -180,82 +236,94 @@
         }
 
         .file-card {
-            background: var(--surface);
-            border: 1px solid var(--border);
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
             border-radius: 16px;
-            padding: 16px;
+            padding: 18px 20px;
             display: flex;
             align-items: center;
-            gap: 14px;
+            gap: 16px;
         }
 
-        .file-icon {
-            width: 44px;
-            height: 44px;
-            background: linear-gradient(135deg, var(--accent-glow), transparent);
-            border: 1px solid rgba(16, 185, 129, 0.2);
-            border-radius: 12px;
+        .file-thumb {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            background: linear-gradient(135deg, #1a1a1a, #0a0a0a);
+            border: 1px solid var(--glass-border);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.25rem;
+            font-size: 1.4rem;
             flex-shrink: 0;
         }
 
-        .file-info {
+        .file-meta {
             flex: 1;
             min-width: 0;
         }
 
         .file-name {
-            font-size: 0.875rem;
+            font-size: 0.9rem;
             font-weight: 500;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            margin-bottom: 2px;
+            margin-bottom: 3px;
         }
 
         .file-size {
             font-size: 0.75rem;
-            color: var(--text-dim);
+            color: var(--text-muted);
+            font-weight: 300;
         }
 
-        /* Progress Bar */
-        .progress-bar-container {
-            margin-top: 16px;
+        /* Progress */
+        .progress-container {
+            margin-top: 20px;
         }
 
-        .progress-bar {
-            height: 4px;
-            background: rgba(255, 255, 255, 0.1);
+        .progress-track {
+            height: 3px;
+            background: rgba(255, 255, 255, 0.08);
             border-radius: 2px;
             overflow: hidden;
         }
 
-        .progress-fill {
+        .progress-bar {
             height: 100%;
-            background: linear-gradient(90deg, var(--accent), #34d399);
             width: 0%;
-            transition: width 0.15s ease;
+            background: linear-gradient(90deg, var(--accent), #4ade80);
             border-radius: 2px;
+            transition: width 0.2s ease;
             position: relative;
         }
 
-        .progress-fill::after {
+        .progress-bar::after {
             content: '';
             position: absolute;
-            right: 0;
             top: 0;
+            right: 0;
             bottom: 0;
-            width: 20px;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3));
+            left: 0;
+            background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.2) 50%, transparent 100%);
+            animation: shimmer 1.5s infinite;
         }
 
-        .progress-stats {
+        @keyframes shimmer {
+            0% {
+                transform: translateX(-100%);
+            }
+
+            100% {
+                transform: translateX(100%);
+            }
+        }
+
+        .progress-info {
             display: flex;
             justify-content: space-between;
-            margin-top: 10px;
+            margin-top: 12px;
             font-size: 0.75rem;
         }
 
@@ -265,100 +333,123 @@
         }
 
         .progress-speed {
-            color: var(--text-dim);
+            color: var(--text-muted);
+            font-weight: 300;
         }
 
         /* Status */
         .status {
             display: none;
-            margin-top: 20px;
-            padding: 16px;
-            border-radius: 14px;
+            margin-top: 24px;
+            padding: 20px;
+            border-radius: 18px;
             text-align: center;
+            animation: popIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes popIn {
+            0% {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
         }
 
         .status.visible {
             display: block;
-            animation: fadeIn 0.3s ease;
         }
 
         .status.success {
-            background: var(--accent-glow);
-            border: 1px solid rgba(16, 185, 129, 0.2);
+            background: linear-gradient(135deg, var(--accent-soft), transparent);
+            border: 1px solid rgba(34, 197, 94, 0.15);
         }
 
         .status.error {
-            background: rgba(239, 68, 68, 0.1);
-            border: 1px solid rgba(239, 68, 68, 0.2);
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), transparent);
+            border: 1px solid rgba(239, 68, 68, 0.15);
         }
 
         .status-icon {
-            font-size: 1.5rem;
-            margin-bottom: 6px;
+            font-size: 2rem;
+            margin-bottom: 8px;
         }
 
-        .status-text {
-            font-size: 0.875rem;
-            font-weight: 500;
+        .status-message {
+            font-size: 0.9rem;
+            font-weight: 400;
         }
 
-        .status.success .status-text {
+        .status.success .status-message {
             color: var(--accent);
         }
 
-        .status.error .status-text {
-            color: var(--error);
+        .status.error .status-message {
+            color: #ef4444;
         }
 
-        /* Footer */
-        .footer {
+        /* Trust Badge */
+        .trust-section {
+            margin-top: 40px;
             text-align: center;
-            margin-top: 32px;
-            font-size: 0.7rem;
-            color: var(--text-dim);
-            opacity: 0.6;
         }
 
-        /* Responsive */
-        @media (max-width: 400px) {
-            .container {
-                padding: 0;
-            }
+        .trust-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            font-weight: 300;
+            letter-spacing: 0.02em;
+        }
 
-            .drop-zone {
-                padding: 40px 20px;
-            }
+        .trust-dot {
+            width: 4px;
+            height: 4px;
+            background: var(--text-muted);
+            border-radius: 50%;
         }
     </style>
 </head>
 
 <body>
+    <div class="ambient"></div>
+
     <div class="container">
-        <header class="header">
-            <h1 class="logo">AE<span>RO</span></h1>
-            <p class="tagline">Secure Local Transfer</p>
-        </header>
+        <section class="logo-section">
+            <h1 class="logo">aero<span class="logo-dot"></span></h1>
+            <p class="tagline">INSTANT FILE TRANSFER</p>
+        </section>
 
         <div class="drop-zone" id="dropZone">
-            <div class="drop-icon">📄</div>
+            <div class="upload-icon">
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 15V3m0 0l-4 4m4-4l4 4" />
+                    <path d="M2 17l.621 2.485A2 2 0 004.561 21h14.878a2 2 0 001.94-1.515L22 17" />
+                </svg>
+            </div>
             <div class="drop-title">Drop your file</div>
-            <div class="drop-subtitle">or tap to browse</div>
+            <div class="drop-subtitle">or tap to select</div>
         </div>
         <input type="file" id="fileInput" accept="*/*">
 
-        <div class="progress-section" id="progressSection">
+        <div class="transfer-section" id="transferSection">
             <div class="file-card">
-                <div class="file-icon">📎</div>
-                <div class="file-info">
+                <div class="file-thumb">📄</div>
+                <div class="file-meta">
                     <div class="file-name" id="fileName">—</div>
                     <div class="file-size" id="fileSize">—</div>
                 </div>
             </div>
-            <div class="progress-bar-container">
-                <div class="progress-bar">
-                    <div class="progress-fill" id="progressFill"></div>
+            <div class="progress-container">
+                <div class="progress-track">
+                    <div class="progress-bar" id="progressBar"></div>
                 </div>
-                <div class="progress-stats">
+                <div class="progress-info">
                     <span class="progress-percent" id="progressPercent">0%</span>
                     <span class="progress-speed" id="progressSpeed">Preparing...</span>
                 </div>
@@ -367,11 +458,17 @@
 
         <div class="status" id="statusBox">
             <div class="status-icon" id="statusIcon"></div>
-            <div class="status-text" id="statusText"></div>
+            <div class="status-message" id="statusMessage"></div>
         </div>
 
-        <div class="footer">
-            End-to-end • No cloud • Your network only
+        <div class="trust-section">
+            <div class="trust-badge">
+                <span>Local network</span>
+                <span class="trust-dot"></span>
+                <span>No cloud</span>
+                <span class="trust-dot"></span>
+                <span>Private</span>
+            </div>
         </div>
     </div>
 
@@ -379,124 +476,88 @@
         (function () {
             'use strict';
             const $ = id => document.getElementById(id);
-            const dropZone = $('dropZone');
-            const fileInput = $('fileInput');
-            const progressSection = $('progressSection');
-            const progressFill = $('progressFill');
-            const progressPercent = $('progressPercent');
-            const progressSpeed = $('progressSpeed');
-            const fileName = $('fileName');
-            const fileSize = $('fileSize');
-            const statusBox = $('statusBox');
-            const statusIcon = $('statusIcon');
-            const statusText = $('statusText');
+            const dropZone = $('dropZone'), fileInput = $('fileInput');
+            const transferSection = $('transferSection'), progressBar = $('progressBar');
+            const progressPercent = $('progressPercent'), progressSpeed = $('progressSpeed');
+            const fileName = $('fileName'), fileSize = $('fileSize');
+            const statusBox = $('statusBox'), statusIcon = $('statusIcon'), statusMessage = $('statusMessage');
 
             const CHUNK_SIZE = 1024 * 1024;
 
-            function formatBytes(b) {
-                if (b === 0) return '0 B';
-                const k = 1024;
-                const sizes = ['B', 'KB', 'MB', 'GB'];
-                const i = Math.floor(Math.log(b) / Math.log(k));
-                return parseFloat((b / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-            }
+            const fmt = b => {
+                if (!b) return '0 B';
+                const i = Math.floor(Math.log(b) / Math.log(1024));
+                return (b / Math.pow(1024, i)).toFixed(1) + ' ' + ['B', 'KB', 'MB', 'GB'][i];
+            };
 
-            function showStatus(type, icon, text) {
+            const showStatus = (type, icon, msg) => {
                 statusBox.className = 'status visible ' + type;
                 statusIcon.textContent = icon;
-                statusText.textContent = text;
-            }
+                statusMessage.textContent = msg;
+            };
 
             async function upload(file) {
                 const t0 = Date.now();
                 dropZone.classList.add('active');
-                progressSection.classList.add('visible');
+                transferSection.classList.add('visible');
                 statusBox.classList.remove('visible');
 
                 fileName.textContent = file.name;
-                fileSize.textContent = formatBytes(file.size);
-                progressFill.style.width = '0%';
+                fileSize.textContent = fmt(file.size);
+                progressBar.style.width = '0%';
                 progressPercent.textContent = '0%';
                 progressSpeed.textContent = 'Connecting...';
 
                 const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
-                let ackedCount = 0;
-                let bytesSent = 0;
+                let acked = 0, sent = 0;
 
                 try {
                     const ws = new WebSocket(`ws://${location.host}/transfer`);
                     ws.binaryType = 'arraybuffer';
-
-                    await new Promise((resolve, reject) => {
-                        ws.onopen = resolve;
-                        ws.onerror = () => reject(new Error('Connection failed'));
-                    });
+                    await new Promise((res, rej) => { ws.onopen = res; ws.onerror = rej; });
 
                     ws.send(JSON.stringify({ name: file.name, size: file.size, chunks: totalChunks }));
-
-                    await new Promise(resolve => {
-                        ws.onmessage = e => {
-                            if (JSON.parse(e.data).status === 'ready') resolve();
-                        };
-                    });
+                    await new Promise(res => { ws.onmessage = e => { if (JSON.parse(e.data).status === 'ready') res(); }; });
 
                     progressSpeed.textContent = 'Transferring...';
 
-                    let ackResolve = null;
+                    let done;
                     ws.onmessage = e => {
                         try {
-                            const msg = JSON.parse(e.data);
-                            if (typeof msg.ack === 'number') {
-                                ackedCount++;
-                                const progress = (ackedCount / totalChunks) * 100;
-                                const elapsed = (Date.now() - t0) / 1000;
-                                progressFill.style.width = Math.min(99, progress) + '%';
-                                progressPercent.textContent = Math.round(progress) + '%';
-                                progressSpeed.textContent = formatBytes(bytesSent / elapsed) + '/s';
-                                if (ackResolve && ackedCount >= totalChunks) ackResolve();
-                            } else if (msg.status && ackResolve) {
-                                ackResolve(msg);
-                            }
+                            const m = JSON.parse(e.data);
+                            if (typeof m.ack === 'number') {
+                                acked++;
+                                const p = (acked / totalChunks) * 100;
+                                const s = sent / ((Date.now() - t0) / 1000);
+                                progressBar.style.width = Math.min(99, p) + '%';
+                                progressPercent.textContent = Math.round(p) + '%';
+                                progressSpeed.textContent = fmt(s) + '/s';
+                                if (done && acked >= totalChunks) done();
+                            } else if (m.status && done) done(m);
                         } catch { }
                     };
 
                     for (let i = 0; i < totalChunks; i++) {
-                        const start = i * CHUNK_SIZE;
-                        const end = Math.min(start + CHUNK_SIZE, file.size);
-                        const data = await file.slice(start, end).arrayBuffer();
-                        const header = new ArrayBuffer(4);
-                        new DataView(header).setUint32(0, i, true);
-                        const combined = new Uint8Array(4 + data.byteLength);
-                        combined.set(new Uint8Array(header), 0);
-                        combined.set(new Uint8Array(data), 4);
-                        ws.send(combined);
-                        bytesSent += data.byteLength;
+                        const d = await file.slice(i * CHUNK_SIZE, Math.min((i + 1) * CHUNK_SIZE, file.size)).arrayBuffer();
+                        const h = new ArrayBuffer(4); new DataView(h).setUint32(0, i, true);
+                        const c = new Uint8Array(4 + d.byteLength);
+                        c.set(new Uint8Array(h), 0); c.set(new Uint8Array(d), 4);
+                        ws.send(c); sent += d.byteLength;
                     }
 
                     progressSpeed.textContent = 'Verifying...';
-                    await new Promise(resolve => {
-                        ackResolve = resolve;
-                        if (ackedCount >= totalChunks) resolve();
-                        setTimeout(resolve, 60000);
-                    });
+                    await new Promise(r => { done = r; if (acked >= totalChunks) r(); setTimeout(r, 60000); });
 
-                    progressSpeed.textContent = 'Completing...';
                     ws.send(JSON.stringify({ done: true }));
-
-                    await new Promise(resolve => {
-                        ws.onmessage = e => resolve();
-                        setTimeout(resolve, 30000);
-                    });
-
+                    await new Promise(r => { ws.onmessage = () => r(); setTimeout(r, 30000); });
                     ws.close();
 
-                    progressFill.style.width = '100%';
+                    progressBar.style.width = '100%';
                     progressPercent.textContent = '100%';
-                    const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
-                    showStatus('success', '✓', `Complete • ${elapsed}s • ${formatBytes(file.size / elapsed)}/s`);
+                    const sec = ((Date.now() - t0) / 1000).toFixed(1);
+                    showStatus('success', '✓', `Transferred in ${sec}s`);
 
                 } catch (e) {
-                    console.error(e);
                     showStatus('error', '✗', e.message);
                 } finally {
                     dropZone.classList.remove('active');
@@ -506,11 +567,7 @@
             dropZone.onclick = () => fileInput.click();
             dropZone.ondragover = e => { e.preventDefault(); dropZone.classList.add('dragover'); };
             dropZone.ondragleave = () => dropZone.classList.remove('dragover');
-            dropZone.ondrop = e => {
-                e.preventDefault();
-                dropZone.classList.remove('dragover');
-                if (e.dataTransfer.files[0]) upload(e.dataTransfer.files[0]);
-            };
+            dropZone.ondrop = e => { e.preventDefault(); dropZone.classList.remove('dragover'); if (e.dataTransfer.files[0]) upload(e.dataTransfer.files[0]); };
             fileInput.onchange = () => { if (fileInput.files[0]) upload(fileInput.files[0]); };
         })();
     </script>
