@@ -38,6 +38,8 @@ declare global {
           StopServer: () => Promise<void>;
           GetServerStatus: () => Promise<ServerStatus>;
           OpenDownloadsFolder: () => Promise<void>;
+          SendFileToPhone: () => Promise<void>;
+          IsPhoneConnected: () => Promise<boolean>;
         };
       };
     };

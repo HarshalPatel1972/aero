@@ -19,6 +19,7 @@ import {
   FileCheck,
   Loader2,
   Volume2,
+  Upload,
 } from 'lucide-react';
 import type { NetworkInterface, ServerStatus, TransferEvent } from './types';
 
@@ -491,12 +492,35 @@ function App() {
         <QRCodeSection url={serverStatus?.url ?? ''} active={isActive} />
 
         {/* Power Button */}
-        <div className="flex justify-center">
+        <div className="flex justify-center gap-4 items-center">
           <PowerButton
             active={isActive}
             loading={loading}
             onClick={handleToggleServer}
           />
+          
+          {/* Send to Phone Button */}
+          {isActive && (
+            <button
+              onClick={async () => {
+                try {
+                  await window.go?.main.App.SendFileToPhone();
+                } catch (err) {
+                  console.error('Failed to send:', err);
+                }
+              }}
+              className="
+                relative w-14 h-14 rounded-full
+                flex items-center justify-center
+                bg-blue-500/20 text-blue-400
+                hover:bg-blue-500/30 transition-all duration-300
+                shadow-lg shadow-blue-500/10
+              "
+              aria-label="Send file to phone"
+            >
+              <Upload className="w-6 h-6" />
+            </button>
+          )}
         </div>
 
         {/* Section Header */}
