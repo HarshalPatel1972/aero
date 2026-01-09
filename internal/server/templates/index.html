@@ -19,20 +19,18 @@
             height: 100%;
             overflow: hidden;
             background: #000;
-            font-family: 'Inter', -apple-system, sans-serif;
+            font-family: 'Inter', sans-serif;
             -webkit-font-smoothing: antialiased;
             touch-action: none;
             user-select: none;
         }
 
-        /* Layer 1: The Void Canvas */
         #vfx {
             position: fixed;
             inset: 0;
             z-index: 0;
         }
 
-        /* Layer 2: The Data - Glass Morphism Overlay */
         #ui-layer {
             position: fixed;
             inset: 0;
@@ -41,9 +39,9 @@
             flex-direction: column;
             align-items: center;
             padding: 48px 24px;
+            pointer-events: none;
         }
 
-        /* Logo - Subtle, Top */
         .logo {
             font-size: 1.2rem;
             font-weight: 700;
@@ -52,106 +50,97 @@
             margin-bottom: 24px;
         }
 
-        /* Hero Filename - MASSIVE Swiss Style */
         .filename {
-            font-size: 1.4rem;
+            font-size: 1.3rem;
             font-weight: 800;
             color: #fff;
             text-align: center;
-            letter-spacing: -0.02em;
             max-width: 80%;
             word-break: break-word;
-            text-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
             opacity: 0;
-            transition: opacity 0.5s ease;
+            transition: opacity 0.5s;
         }
 
         .filename.visible {
             opacity: 1;
         }
 
-        /* The Massive Progress Number */
         .progress-number {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 8rem;
+            font-size: 6rem;
             font-weight: 900;
-            color: rgba(255, 255, 255, 0.08);
-            mix-blend-mode: overlay;
+            color: rgba(255, 255, 255, 0.06);
             pointer-events: none;
             opacity: 0;
-            transition: opacity 0.5s ease;
+            transition: opacity 0.5s;
         }
 
         .progress-number.visible {
             opacity: 1;
         }
 
-        /* Swipe Hint */
         .hint {
             position: absolute;
-            bottom: 120px;
+            bottom: 100px;
             font-size: 0.75rem;
             font-weight: 700;
-            color: rgba(255, 255, 255, 0.3);
+            color: rgba(255, 255, 255, 0.25);
             text-transform: uppercase;
             letter-spacing: 0.2em;
-            transition: opacity 0.5s ease;
+            pointer-events: all;
+            cursor: pointer;
         }
 
         .hint.hidden {
             opacity: 0;
         }
 
-        /* Status Text */
         .status {
             position: absolute;
-            bottom: 80px;
+            bottom: 60px;
             font-size: 0.7rem;
-            font-weight: 700;
-            color: rgba(255, 255, 255, 0.5);
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.4);
             text-transform: uppercase;
-            letter-spacing: 0.15em;
+            letter-spacing: 0.1em;
             opacity: 0;
-            transition: opacity 0.3s ease;
+            transition: opacity 0.3s;
         }
 
         .status.visible {
             opacity: 1;
         }
 
-        /* Recents at bottom */
         .recents {
             position: absolute;
-            bottom: 24px;
+            bottom: 20px;
             width: calc(100% - 48px);
-            max-width: 300px;
+            max-width: 280px;
         }
 
         .recent-item {
             display: flex;
             align-items: center;
-            gap: 10px;
-            padding: 10px 14px;
+            gap: 8px;
+            padding: 8px 12px;
             background: rgba(255, 255, 255, 0.03);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            border-radius: 10px;
-            margin-bottom: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            margin-bottom: 4px;
         }
 
         .recent-icon {
-            font-size: 0.8rem;
-            opacity: 0.6;
+            opacity: 0.5;
         }
 
         .recent-name {
             flex: 1;
-            font-size: 0.7rem;
+            font-size: 0.65rem;
             font-weight: 600;
-            color: rgba(255, 255, 255, 0.7);
+            color: rgba(255, 255, 255, 0.6);
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -170,7 +159,7 @@
         <div class="logo">aero</div>
         <div class="filename" id="filename"></div>
         <div class="progress-number" id="progressNumber">0</div>
-        <div class="hint" id="hint">↑ swipe to send</div>
+        <div class="hint" id="hint">tap to send</div>
         <div class="status" id="status"></div>
         <div class="recents" id="recents"></div>
     </div>
@@ -178,399 +167,326 @@
     <input type="file" id="fileInput" accept="*/*">
 
     <script>
-        // ═══════════════════════════════════════════════════════════════
-        // CHROMATIC FLUID ENGINE - "Galactic Iridescence"
-        // ═══════════════════════════════════════════════════════════════
+        (function () {
+            'use strict';
 
-        const canvas = document.getElementById('vfx');
-        const ctx = canvas.getContext('2d');
-        const fileInput = document.getElementById('fileInput');
-        const filenameEl = document.getElementById('filename');
-        const progressNumber = document.getElementById('progressNumber');
-        const hintEl = document.getElementById('hint');
-        const statusEl = document.getElementById('status');
-        const recentsDiv = document.getElementById('recents');
+            // Elements
+            const canvas = document.getElementById('vfx');
+            const ctx = canvas.getContext('2d');
+            const fileInput = document.getElementById('fileInput');
+            const filenameEl = document.getElementById('filename');
+            const progressNumber = document.getElementById('progressNumber');
+            const hintEl = document.getElementById('hint');
+            const statusEl = document.getElementById('status');
+            const recentsDiv = document.getElementById('recents');
 
-        let W, H, centerX, centerY;
-        const RING_RADIUS = 80;
+            let W, H, cx, cy;
+            const RADIUS = 70;
 
-        // Iridescent color generator
-        const getIridescentColor = (offset = 0, saturation = 100, lightness = 60) => {
-            const hue = (performance.now() * 0.05 + offset) % 360;
-            return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
-        };
-
-        // ═══════════════════════════════════════════════════════════════
-        // CHROMATIC FLUID CLASS
-        // ═══════════════════════════════════════════════════════════════
-        class ChromaticFluid {
-            constructor() {
-                this.state = 'idle'; // idle, charging, beam, burst
-                this.ringPhase = 0;
-                this.beamIntensity = 0;
-                this.burstRadius = 0;
-                this.progress = 0;
+            // HSL to RGB helper
+            function hslToRgb(h, s, l) {
+                s /= 100; l /= 100;
+                const k = n => (n + h / 30) % 12;
+                const a = s * Math.min(l, 1 - l);
+                const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1));
+                return [Math.round(f(0) * 255), Math.round(f(8) * 255), Math.round(f(4) * 255)];
             }
 
-            drawBreathingRing() {
-                const time = performance.now() * 0.001;
-                const breathe = Math.sin(time * 2) * 0.15 + 1;
-                const r = RING_RADIUS * breathe;
+            function getColor(offset, alpha) {
+                const hue = (performance.now() * 0.03 + offset) % 360;
+                const [r, g, b] = hslToRgb(hue, 80, 60);
+                return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+            }
 
-                // Multiple rings with different hue offsets
-                for (let i = 0; i < 3; i++) {
-                    const offset = i * 120;
-                    const alpha = 0.3 - i * 0.08;
-                    const ringR = r + i * 15;
+            // State
+            let state = 'idle'; // idle, transfer, burst
+            let progress = 0;
+            let burstR = 0;
 
-                    // Gradient for ring
-                    const gradient = ctx.createRadialGradient(
-                        centerX, centerY, ringR - 10,
-                        centerX, centerY, ringR + 10
-                    );
-                    gradient.addColorStop(0, 'transparent');
-                    gradient.addColorStop(0.5, getIridescentColor(offset, 100, 50).replace(')', `, ${alpha})`).replace('hsl', 'hsla'));
-                    gradient.addColorStop(1, 'transparent');
+            // Resize
+            function resize() {
+                W = canvas.width = window.innerWidth;
+                H = canvas.height = window.innerHeight;
+                cx = W / 2;
+                cy = H / 2;
+            }
+            window.addEventListener('resize', resize);
+            resize();
 
+            // Draw breathing ring
+            function drawRing() {
+                const t = performance.now() * 0.001;
+                const breathe = 1 + Math.sin(t * 2) * 0.08;
+                const r = RADIUS * breathe;
+
+                // Glow
+                const glow = ctx.createRadialGradient(cx, cy, r * 0.3, cx, cy, r * 1.8);
+                glow.addColorStop(0, getColor(0, 0.15));
+                glow.addColorStop(0.5, getColor(60, 0.08));
+                glow.addColorStop(1, 'transparent');
+                ctx.beginPath();
+                ctx.arc(cx, cy, r * 1.8, 0, Math.PI * 2);
+                ctx.fillStyle = glow;
+                ctx.fill();
+
+                // Main ring
+                ctx.beginPath();
+                ctx.arc(cx, cy, r, 0, Math.PI * 2);
+                ctx.strokeStyle = getColor(0, 0.6);
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                // Second ring
+                ctx.beginPath();
+                ctx.arc(cx, cy, r + 15, 0, Math.PI * 2);
+                ctx.strokeStyle = getColor(90, 0.3);
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                // Third ring
+                ctx.beginPath();
+                ctx.arc(cx, cy, r + 25, 0, Math.PI * 2);
+                ctx.strokeStyle = getColor(180, 0.15);
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                // Progress arc
+                if (progress > 0 && state === 'transfer') {
                     ctx.beginPath();
-                    ctx.arc(centerX, centerY, ringR, 0, Math.PI * 2);
-                    ctx.strokeStyle = gradient;
+                    ctx.arc(cx, cy, r + 8, -Math.PI / 2, -Math.PI / 2 + (Math.PI * 2 * progress / 100));
+                    ctx.strokeStyle = getColor(0, 0.9);
                     ctx.lineWidth = 4;
+                    ctx.lineCap = 'round';
+                    ctx.stroke();
+                }
+            }
+
+            // Draw beam
+            function drawBeam() {
+                const t = performance.now() * 0.002;
+                const beamW = 40 + Math.sin(t * 3) * 15;
+
+                // Beam gradient
+                const grad = ctx.createLinearGradient(cx - beamW, 0, cx + beamW, 0);
+                grad.addColorStop(0, 'transparent');
+                grad.addColorStop(0.3, getColor(0, 0.2));
+                grad.addColorStop(0.5, getColor(120, 0.4));
+                grad.addColorStop(0.7, getColor(240, 0.2));
+                grad.addColorStop(1, 'transparent');
+
+                ctx.fillStyle = grad;
+                ctx.fillRect(cx - beamW, 0, beamW * 2, H);
+
+                // Hot core
+                ctx.save();
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = '#fff';
+                const coreGrad = ctx.createLinearGradient(cx - 5, 0, cx + 5, 0);
+                coreGrad.addColorStop(0, 'transparent');
+                coreGrad.addColorStop(0.5, 'rgba(255,255,255,0.7)');
+                coreGrad.addColorStop(1, 'transparent');
+                ctx.fillStyle = coreGrad;
+                ctx.fillRect(cx - 5, 0, 10, H);
+                ctx.restore();
+            }
+
+            // Draw burst
+            function drawBurst() {
+                burstR += (250 - burstR) * 0.08;
+                const alpha = 1 - burstR / 250;
+
+                for (let i = 0; i < 4; i++) {
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, burstR * (1 - i * 0.2), 0, Math.PI * 2);
+                    ctx.strokeStyle = getColor(i * 90, alpha * 0.4);
+                    ctx.lineWidth = 3;
                     ctx.stroke();
                 }
 
-                // Core glow
-                const coreGrad = ctx.createRadialGradient(
-                    centerX, centerY, 0,
-                    centerX, centerY, r * 0.8
-                );
-                coreGrad.addColorStop(0, 'rgba(255, 255, 255, 0.05)');
-                coreGrad.addColorStop(1, 'transparent');
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, r * 0.8, 0, Math.PI * 2);
-                ctx.fillStyle = coreGrad;
-                ctx.fill();
-
-                // Undulating wave effect on ring
-                ctx.beginPath();
-                for (let a = 0; a < Math.PI * 2; a += 0.05) {
-                    const wave = Math.sin(a * 6 + time * 3) * 5;
-                    const px = centerX + Math.cos(a) * (r + wave);
-                    const py = centerY + Math.sin(a) * (r + wave);
-                    if (a === 0) ctx.moveTo(px, py);
-                    else ctx.lineTo(px, py);
-                }
-                ctx.closePath();
-                ctx.strokeStyle = getIridescentColor(0, 80, 70).replace(')', ', 0.4)').replace('hsl', 'hsla');
-                ctx.lineWidth = 2;
-                ctx.stroke();
-            }
-
-            drawBeam() {
-                const time = performance.now() * 0.002;
-                const beamWidth = 60 + Math.sin(time * 5) * 10;
-
-                // The vertical light pillar
-                const gradient = ctx.createLinearGradient(centerX - beamWidth, 0, centerX + beamWidth, 0);
-                gradient.addColorStop(0, 'transparent');
-                gradient.addColorStop(0.2, getIridescentColor(0, 100, 60).replace(')', ', 0.3)').replace('hsl', 'hsla'));
-                gradient.addColorStop(0.5, getIridescentColor(60, 100, 80).replace(')', ', 0.6)').replace('hsl', 'hsla'));
-                gradient.addColorStop(0.8, getIridescentColor(120, 100, 60).replace(')', ', 0.3)').replace('hsl', 'hsla'));
-                gradient.addColorStop(1, 'transparent');
-
-                // Main beam
-                ctx.fillStyle = gradient;
-                ctx.fillRect(centerX - beamWidth, 0, beamWidth * 2, H);
-
-                // Hot white core
-                ctx.save();
-                ctx.shadowBlur = 30;
-                ctx.shadowColor = '#fff';
-
-                const coreWidth = 8 + Math.sin(time * 8) * 4;
-                const coreGrad = ctx.createLinearGradient(centerX - coreWidth, 0, centerX + coreWidth, 0);
-                coreGrad.addColorStop(0, 'transparent');
-                coreGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.9)');
-                coreGrad.addColorStop(1, 'transparent');
-
-                ctx.fillStyle = coreGrad;
-                ctx.fillRect(centerX - coreWidth, 0, coreWidth * 2, H);
-                ctx.restore();
-
-                // Energy pulses traveling up
-                const pulseCount = 5;
-                for (let i = 0; i < pulseCount; i++) {
-                    const pulseY = ((time * 200 + i * (H / pulseCount)) % H);
-                    const pulseAlpha = 0.5 - Math.abs(pulseY - centerY) / H;
-
-                    ctx.beginPath();
-                    ctx.ellipse(centerX, H - pulseY, beamWidth * 0.8, 20, 0, 0, Math.PI * 2);
-                    ctx.fillStyle = `rgba(255, 255, 255, ${Math.max(0, pulseAlpha * 0.3)})`;
-                    ctx.fill();
+                if (burstR > 240) {
+                    state = 'idle';
+                    burstR = 0;
                 }
             }
 
-            drawBurst() {
-                this.burstRadius += (300 - this.burstRadius) * 0.1;
-                const alpha = Math.max(0, 1 - this.burstRadius / 300);
+            // Render loop
+            function render() {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+                ctx.fillRect(0, 0, W, H);
 
-                // Expanding chromatic rings
-                for (let i = 0; i < 5; i++) {
-                    const r = this.burstRadius * (1 - i * 0.15);
-                    if (r > 0) {
-                        ctx.beginPath();
-                        ctx.arc(centerX, centerY, r, 0, Math.PI * 2);
-                        ctx.strokeStyle = getIridescentColor(i * 60, 100, 70).replace(')', `, ${alpha * 0.5})`).replace('hsl', 'hsla');
-                        ctx.lineWidth = 4;
-                        ctx.stroke();
-                    }
+                if (state === 'idle') {
+                    drawRing();
+                } else if (state === 'transfer') {
+                    drawBeam();
+                    drawRing();
+                } else if (state === 'burst') {
+                    drawBurst();
                 }
 
-                // Central flash
-                ctx.save();
-                ctx.shadowBlur = 50;
-                ctx.shadowColor = '#fff';
-                const flashGrad = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, this.burstRadius * 0.5);
-                flashGrad.addColorStop(0, `rgba(255, 255, 255, ${alpha})`);
-                flashGrad.addColorStop(1, 'transparent');
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, this.burstRadius * 0.5, 0, Math.PI * 2);
-                ctx.fillStyle = flashGrad;
-                ctx.fill();
-                ctx.restore();
-
-                if (this.burstRadius > 290) {
-                    this.state = 'idle';
-                    this.burstRadius = 0;
-                }
+                requestAnimationFrame(render);
             }
+            render();
 
-            update() {
-                this.ringPhase += 0.02;
-            }
+            // Interaction
+            hintEl.addEventListener('click', () => {
+                if (state === 'idle') fileInput.click();
+            });
 
-            draw() {
-                if (this.state === 'idle' || this.state === 'charging') {
-                    this.drawBreathingRing();
-                }
-                if (this.state === 'beam') {
-                    this.drawBeam();
-                    this.drawBreathingRing();
-                }
-                if (this.state === 'burst') {
-                    this.drawBurst();
-                }
-            }
-        }
+            document.addEventListener('click', () => {
+                if (state === 'idle') fileInput.click();
+            });
 
-        // ═══════════════════════════════════════════════════════════════
-        // RENDER LOOP
-        // ═══════════════════════════════════════════════════════════════
-        const fluid = new ChromaticFluid();
+            // WebSocket
+            const recents = [];
+            let ws = null;
+            let uploadData = null;
+            let receiveData = null;
 
-        function resize() {
-            W = canvas.width = window.innerWidth;
-            H = canvas.height = window.innerHeight;
-            centerX = W / 2;
-            centerY = H / 2;
-        }
+            const fmt = b => {
+                if (!b) return '0 B';
+                const i = Math.floor(Math.log(b) / Math.log(1024));
+                return (b / Math.pow(1024, i)).toFixed(1) + ' ' + ['B', 'KB', 'MB', 'GB'][i];
+            };
 
-        function render() {
-            // Clear with fade for trails
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-            ctx.fillRect(0, 0, W, H);
+            const addRecent = (name, type) => {
+                recents.unshift({ name, type });
+                if (recents.length > 2) recents.pop();
+                recentsDiv.innerHTML = recents.map(r => `
+                <div class="recent-item">
+                    <div class="recent-icon">${r.type === 'sent' ? '↑' : '↓'}</div>
+                    <div class="recent-name">${r.name}</div>
+                </div>
+            `).join('');
+            };
 
-            fluid.update();
-            fluid.draw();
+            const reset = () => {
+                state = 'idle';
+                progress = 0;
+                filenameEl.classList.remove('visible');
+                progressNumber.classList.remove('visible');
+                statusEl.classList.remove('visible');
+                hintEl.classList.remove('hidden');
+                uploadData = null;
+                receiveData = null;
+            };
 
-            requestAnimationFrame(render);
-        }
-
-        window.addEventListener('resize', resize);
-        resize();
-        render();
-
-        // ═══════════════════════════════════════════════════════════════
-        // SWIPE INTERACTION
-        // ═══════════════════════════════════════════════════════════════
-        let touchStartY = 0;
-        let isSwiping = false;
-
-        document.addEventListener('touchstart', (e) => {
-            touchStartY = e.touches[0].clientY;
-            isSwiping = true;
-        });
-
-        document.addEventListener('touchmove', (e) => {
-            if (!isSwiping) return;
-            const deltaY = touchStartY - e.touches[0].clientY;
-            if (deltaY > 50 && fluid.state === 'idle') {
-                fluid.state = 'charging';
-                hintEl.classList.add('hidden');
-                fileInput.click();
-                isSwiping = false;
-            }
-        });
-
-        document.addEventListener('touchend', () => { isSwiping = false; });
-
-        // Fallback: click to open file
-        document.addEventListener('click', () => {
-            if (fluid.state === 'idle') {
-                hintEl.classList.add('hidden');
-                fileInput.click();
-            }
-        });
-
-        // ═══════════════════════════════════════════════════════════════
-        // UPLOAD & WEBSOCKET LOGIC
-        // ═══════════════════════════════════════════════════════════════
-        const recents = [];
-        let ws = null;
-        let uploadData = null;
-        let receiveData = null;
-        let currentState = 'idle';
-
-        const fmt = b => {
-            if (!b) return '0 B';
-            const i = Math.floor(Math.log(b) / Math.log(1024));
-            return (b / Math.pow(1024, i)).toFixed(1) + ' ' + ['B', 'KB', 'MB', 'GB'][i];
-        };
-
-        const addRecent = (name, type) => {
-            recents.unshift({ name, type });
-            if (recents.length > 2) recents.pop();
-            recentsDiv.innerHTML = recents.map(r => `
-            <div class="recent-item">
-                <div class="recent-icon">${r.type === 'sent' ? '↑' : '↓'}</div>
-                <div class="recent-name">${r.name}</div>
-            </div>
-        `).join('');
-        };
-
-        const resetUI = () => {
-            currentState = 'idle';
-            fluid.state = 'idle';
-            filenameEl.classList.remove('visible');
-            progressNumber.classList.remove('visible');
-            statusEl.classList.remove('visible');
-            hintEl.classList.remove('hidden');
-            uploadData = null;
-            receiveData = null;
-        };
-
-        const handleMessage = (e) => {
-            if (e.data instanceof ArrayBuffer && currentState === 'receiving' && receiveData) {
-                const idx = new DataView(e.data).getUint32(0, true);
-                receiveData.chunks[idx] = new Uint8Array(e.data, 4);
-                const pct = Math.round((receiveData.chunks.filter(c => c).length / receiveData.meta.chunks) * 100);
-                progressNumber.textContent = pct;
-                ws.send(JSON.stringify({ ack: idx }));
-                return;
-            }
-
-            try {
-                const msg = JSON.parse(e.data);
-
-                if (currentState === 'uploading' && uploadData) {
-                    if (msg.status === 'ready') uploadData.ready = true;
-                    if (typeof msg.ack === 'number') {
-                        uploadData.acked++;
-                        const pct = Math.round((uploadData.acked / uploadData.total) * 100);
-                        progressNumber.textContent = pct;
-                        statusEl.textContent = fmt(uploadData.sent / ((Date.now() - uploadData.t0) / 1000)) + '/s';
-                        if (uploadData.acked >= uploadData.total && uploadData.doneResolve) uploadData.doneResolve();
-                    }
-                    if (msg.status === 'success') {
-                        fluid.state = 'burst';
-                        progressNumber.textContent = '✓';
-                        statusEl.textContent = 'sent';
-                        addRecent(uploadData.name, 'sent');
-                        setTimeout(resetUI, 2500);
-                    }
+            const handleMessage = e => {
+                if (e.data instanceof ArrayBuffer && receiveData) {
+                    const idx = new DataView(e.data).getUint32(0, true);
+                    receiveData.chunks[idx] = new Uint8Array(e.data, 4);
+                    progress = Math.round((receiveData.chunks.filter(c => c).length / receiveData.total) * 100);
+                    progressNumber.textContent = progress;
+                    ws.send(JSON.stringify({ ack: idx }));
                     return;
                 }
 
-                if (msg.type === 'file_incoming') {
-                    currentState = 'receiving';
-                    fluid.state = 'beam';
-                    receiveData = { meta: msg, chunks: new Array(msg.chunks) };
-                    filenameEl.textContent = msg.name;
-                    filenameEl.classList.add('visible');
-                    progressNumber.textContent = '0';
-                    progressNumber.classList.add('visible');
-                    statusEl.textContent = 'receiving';
-                    statusEl.classList.add('visible');
-                    hintEl.classList.add('hidden');
+                try {
+                    const msg = JSON.parse(e.data);
+
+                    if (uploadData) {
+                        if (msg.status === 'ready') uploadData.ready = true;
+                        if (typeof msg.ack === 'number') {
+                            uploadData.acked++;
+                            progress = Math.round((uploadData.acked / uploadData.total) * 100);
+                            progressNumber.textContent = progress;
+                            statusEl.textContent = fmt(uploadData.sent / ((Date.now() - uploadData.t0) / 1000)) + '/s';
+                            if (uploadData.acked >= uploadData.total && uploadData.done) uploadData.done();
+                        }
+                        if (msg.status === 'success') {
+                            state = 'burst';
+                            progressNumber.textContent = '✓';
+                            statusEl.textContent = 'sent';
+                            addRecent(uploadData.name, 'sent');
+                            setTimeout(reset, 2500);
+                        }
+                    }
+
+                    if (msg.type === 'file_incoming') {
+                        state = 'transfer';
+                        receiveData = { name: msg.name, total: msg.chunks, chunks: new Array(msg.chunks) };
+                        filenameEl.textContent = msg.name;
+                        filenameEl.classList.add('visible');
+                        progressNumber.textContent = '0';
+                        progressNumber.classList.add('visible');
+                        statusEl.textContent = 'receiving';
+                        statusEl.classList.add('visible');
+                        hintEl.classList.add('hidden');
+                    }
+
+                    if (msg.type === 'file_complete' && receiveData) {
+                        const blob = new Blob(receiveData.chunks);
+                        const a = document.createElement('a');
+                        a.href = URL.createObjectURL(blob);
+                        a.download = receiveData.name;
+                        a.click();
+                        state = 'burst';
+                        progressNumber.textContent = '✓';
+                        statusEl.textContent = 'saved';
+                        addRecent(receiveData.name, 'received');
+                        setTimeout(reset, 2500);
+                    }
+                } catch (err) { }
+            };
+
+            const connect = () => {
+                ws = new WebSocket('ws://' + location.host + '/transfer');
+                ws.binaryType = 'arraybuffer';
+                ws.onmessage = handleMessage;
+                ws.onclose = () => setTimeout(connect, 2000);
+            };
+            connect();
+
+            async function upload(file) {
+                if (state !== 'idle') return;
+                state = 'transfer';
+
+                const CHUNK = 1024 * 1024;
+                const total = Math.ceil(file.size / CHUNK);
+                uploadData = { name: file.name, total, acked: 0, sent: 0, t0: Date.now(), ready: false, done: null };
+
+                filenameEl.textContent = file.name;
+                filenameEl.classList.add('visible');
+                progressNumber.textContent = '0';
+                progressNumber.classList.add('visible');
+                statusEl.textContent = 'connecting';
+                statusEl.classList.add('visible');
+                hintEl.classList.add('hidden');
+                progress = 0;
+
+                try {
+                    ws.send(JSON.stringify({ name: file.name, size: file.size, chunks: total }));
+                    await new Promise((r, j) => {
+                        const c = () => uploadData.ready ? r() : setTimeout(c, 10);
+                        c(); setTimeout(() => j(new Error('timeout')), 10000);
+                    });
+
+                    statusEl.textContent = 'sending';
+                    for (let i = 0; i < total; i++) {
+                        const d = await file.slice(i * CHUNK, Math.min((i + 1) * CHUNK, file.size)).arrayBuffer();
+                        const h = new ArrayBuffer(4);
+                        new DataView(h).setUint32(0, i, true);
+                        const c = new Uint8Array(4 + d.byteLength);
+                        c.set(new Uint8Array(h), 0);
+                        c.set(new Uint8Array(d), 4);
+                        ws.send(c);
+                        uploadData.sent += d.byteLength;
+                    }
+
+                    statusEl.textContent = 'verifying';
+                    await new Promise(r => { uploadData.done = r; if (uploadData.acked >= total) r(); setTimeout(r, 60000); });
+                    ws.send(JSON.stringify({ done: true }));
+                } catch (e) {
+                    statusEl.textContent = 'failed';
+                    state = 'idle';
+                    setTimeout(reset, 2000);
                 }
-
-                if (msg.type === 'file_complete' && receiveData) {
-                    const blob = new Blob(receiveData.chunks);
-                    const a = document.createElement('a');
-                    a.href = URL.createObjectURL(blob);
-                    a.download = receiveData.meta.name;
-                    a.click();
-                    fluid.state = 'burst';
-                    progressNumber.textContent = '✓';
-                    statusEl.textContent = 'saved';
-                    addRecent(receiveData.meta.name, 'received');
-                    setTimeout(resetUI, 2500);
-                }
-            } catch { }
-        };
-
-        const connect = () => {
-            ws = new WebSocket(`ws://${location.host}/transfer`);
-            ws.binaryType = 'arraybuffer';
-            ws.onmessage = handleMessage;
-            ws.onclose = () => setTimeout(connect, 2000);
-        };
-        connect();
-
-        async function upload(file) {
-            if (currentState !== 'idle') return;
-            currentState = 'uploading';
-            fluid.state = 'beam';
-
-            const CHUNK = 1024 * 1024;
-            const total = Math.ceil(file.size / CHUNK);
-            uploadData = { name: file.name, total, acked: 0, sent: 0, t0: Date.now(), ready: false, doneResolve: null };
-
-            filenameEl.textContent = file.name;
-            filenameEl.classList.add('visible');
-            progressNumber.textContent = '0';
-            progressNumber.classList.add('visible');
-            statusEl.textContent = 'connecting';
-            statusEl.classList.add('visible');
-
-            try {
-                ws.send(JSON.stringify({ name: file.name, size: file.size, chunks: total }));
-                await new Promise((r, j) => {
-                    const c = () => uploadData.ready ? r() : setTimeout(c, 10);
-                    c(); setTimeout(() => j(new Error('timeout')), 10000);
-                });
-
-                statusEl.textContent = 'sending';
-                for (let i = 0; i < total; i++) {
-                    const d = await file.slice(i * CHUNK, Math.min((i + 1) * CHUNK, file.size)).arrayBuffer();
-                    const h = new ArrayBuffer(4); new DataView(h).setUint32(0, i, true);
-                    const c = new Uint8Array(4 + d.byteLength);
-                    c.set(new Uint8Array(h), 0); c.set(new Uint8Array(d), 4);
-                    ws.send(c);
-                    uploadData.sent += d.byteLength;
-                }
-
-                statusEl.textContent = 'verifying';
-                await new Promise(r => { uploadData.doneResolve = r; if (uploadData.acked >= total) r(); setTimeout(r, 60000); });
-                ws.send(JSON.stringify({ done: true }));
-            } catch (e) {
-                statusEl.textContent = 'failed';
-                fluid.state = 'idle';
-                setTimeout(resetUI, 2000);
             }
-        }
 
-        fileInput.onchange = () => { if (fileInput.files[0]) upload(fileInput.files[0]); fileInput.value = ''; };
+            fileInput.onchange = () => {
+                if (fileInput.files[0]) upload(fileInput.files[0]);
+                fileInput.value = '';
+            };
+        })();
     </script>
 </body>
 
