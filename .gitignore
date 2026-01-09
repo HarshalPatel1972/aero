@@ -1,0 +1,41 @@
+# Build artifacts
+*.exe
+*.dll
+*.so
+*.dylib
+build/
+
+# Go
+*.test
+*.out
+go.work
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Uploads (user data)
+uploads/
+*.part
+
+# Temp files
+*.tmp
+*.temp
+*.log
+
+# Environment
+.env
+.env.local

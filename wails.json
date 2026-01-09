@@ -1,0 +1,20 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "aero",
+  "outputfilename": "AERO",
+  "frontend:install": "npm install",
+  "frontend:build": "npm run build",
+  "frontend:dev:watcher": "npm run dev",
+  "frontend:dev:serverUrl": "auto",
+  "author": {
+    "name": "Project AERO Contributors",
+    "email": "aero@example.com"
+  },
+  "info": {
+    "companyName": "AERO",
+    "productName": "AERO File Transfer",
+    "productVersion": "1.0.0",
+    "copyright": "Copyright © 2026 Project AERO Contributors",
+    "comments": "Secure LAN File Transfer"
+  }
+}

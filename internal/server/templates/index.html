@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>AERO • Transfer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        :root {
+            --bg: #0a0a0a;
+            --bg2: #111;
+            --text: #fff;
+            --text2: #666;
+            --accent: #0f0;
+            --error: #f44
+        }
+
+        body {
+            font-family: system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px
+        }
+
+        .c {
+            width: 100%;
+            max-width: 360px
+        }
+
+        .h {
+            text-align: center;
+            margin-bottom: 20px
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700
+        }
+
+        .logo span {
+            color: var(--accent)
+        }
+
+        .tag {
+            color: var(--text2);
+            font-size: .7rem
+        }
+
+        .badge {
+            display: inline-flex;
+            background: #0f02;
+            color: var(--accent);
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: .6rem;
+            margin-top: 6px
+        }
+
+        .drop {
+            border: 2px dashed #222;
+            border-radius: 12px;
+            padding: 36px 16px;
+            text-align: center;
+            cursor: pointer;
+            background: var(--bg2);
+            transition: .15s
+        }
+
+        .drop:hover,
+        .drop.over {
+            border-color: var(--accent);
+            background: #151515
+        }
+
+        .drop.active {
+            pointer-events: none;
+            border-color: var(--accent)
+        }
+
+        .icon {
+            font-size: 1.8rem;
+            margin-bottom: 6px
+        }
+
+        .txt {
+            font-size: .9rem
+        }
+
+        .hint {
+            color: var(--text2);
+            font-size: .7rem
+        }
+
+        input[type=file] {
+            display: none
+        }
+
+        .prog {
+            display: none;
+            margin-top: 14px
+        }
+
+        .prog.on {
+            display: block
+        }
+
+        .info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px;
+            background: var(--bg2);
+            border-radius: 8px;
+            margin-bottom: 8px
+        }
+
+        .info .i {
+            font-size: 1.1rem
+        }
+
+        .info .d {
+            flex: 1;
+            min-width: 0
+        }
+
+        .info .n {
+            font-size: .75rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis
+        }
+
+        .info .s {
+            color: var(--text2);
+            font-size: .6rem
+        }
+
+        .bar {
+            height: 4px;
+            background: #222;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-bottom: 5px
+        }
+
+        .bar .fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), #0c0);
+            width: 0;
+            transition: width .1s
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            font-size: .6rem;
+            color: var(--text2)
+        }
+
+        .status {
+            text-align: center;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 14px;
+            display: none;
+            font-size: .75rem
+        }
+
+        .status.on {
+            display: block
+        }
+
+        .status.ok {
+            background: #0f02;
+            color: var(--accent)
+        }
+
+        .status.err {
+            background: #f442;
+            color: var(--error)
+        }
+    </style>
+</head>
+
+<body>
+    <div class="c">
+        <header class="h">
+            <h1 class="logo">AE<span>R</span>O</h1>
+            <p class="tag">Fast & Reliable Transfer</p>
+            <div class="badge">⚡ Windowed ACK Protocol</div>
+        </header>
+        <div class="drop" id="drop">
+            <div class="icon">📁</div>
+            <div class="txt">Drop file here</div>
+            <div class="hint">or tap to select</div>
+        </div>
+        <input type="file" id="file" accept="*/*">
+        <div class="prog" id="prog">
+            <div class="info">
+                <div class="i">📄</div>
+                <div class="d">
+                    <div class="n" id="fname">-</div>
+                    <div class="s" id="fsize">-</div>
+                </div>
+            </div>
+            <div class="bar">
+                <div class="fill" id="bar"></div>
+            </div>
+            <div class="stats">
+                <span id="pct">0%</span>
+                <span id="spd">Connecting...</span>
+            </div>
+        </div>
+        <div class="status" id="status"><span id="stxt"></span></div>
+    </div>
+    <script>
+        (function () {
+            'use strict';
+            const $ = id => document.getElementById(id);
+            const drop = $('drop'), fileInput = $('file'), prog = $('prog'), bar = $('bar'), pct = $('pct'), spd = $('spd');
+            const fname = $('fname'), fsize = $('fsize'), status = $('status'), stxt = $('stxt');
+
+            // TUNING PARAMETERS
+            const CHUNK_SIZE = 512 * 1024;  // 512KB per chunk
+            const WINDOW_SIZE = 8;          // Send 8 chunks before waiting for ACKs
+
+            function fmt(b) { if (b === 0) return '0 B'; const k = 1024, s = ['B', 'KB', 'MB', 'GB']; const i = Math.floor(Math.log(b) / Math.log(k)); return (b / Math.pow(k, i)).toFixed(1) + ' ' + s[i] }
+            function show(type, msg) { status.className = 'status on ' + type; stxt.textContent = msg }
+
+            async function upload(f) {
+                const t0 = Date.now();
+                drop.classList.add('active');
+                prog.classList.add('on');
+                status.classList.remove('on');
+                fname.textContent = f.name;
+                fsize.textContent = fmt(f.size);
+                bar.style.width = '0%';
+                pct.textContent = '0%';
+                spd.textContent = 'Connecting...';
+
+                const totalChunks = Math.ceil(f.size / CHUNK_SIZE);
+                let ackedChunks = new Set();
+                let bytesSent = 0;
+
+                try {
+                    const ws = new WebSocket(`ws://${location.host}/transfer`);
+                    ws.binaryType = 'arraybuffer';
+
+                    await new Promise((resolve, reject) => {
+                        ws.onopen = resolve;
+                        ws.onerror = () => reject(new Error('Connection failed'));
+                        setTimeout(() => reject(new Error('Connection timeout')), 10000);
+                    });
+
+                    spd.textContent = 'Initializing...';
+
+                    // Send metadata
+                    ws.send(JSON.stringify({
+                        name: f.name,
+                        size: f.size,
+                        chunks: totalChunks
+                    }));
+
+                    // Wait for ready
+                    await new Promise((resolve, reject) => {
+                        ws.onmessage = (e) => {
+                            const msg = JSON.parse(e.data);
+                            if (msg.status === 'ready') resolve();
+                            else reject(new Error('Not ready'));
+                        };
+                        setTimeout(() => reject(new Error('Init timeout')), 10000);
+                    });
+
+                    spd.textContent = 'Transferring...';
+
+                    // Setup ACK handler
+                    ws.onmessage = (e) => {
+                        try {
+                            const msg = JSON.parse(e.data);
+                            if (typeof msg.ack === 'number') {
+                                ackedChunks.add(msg.ack);
+                            }
+                        } catch { }
+                    };
+
+                    // Read all chunks into buffer (for reliable sending)
+                    const chunks = [];
+                    for (let i = 0; i < totalChunks; i++) {
+                        const start = i * CHUNK_SIZE;
+                        const end = Math.min(start + CHUNK_SIZE, f.size);
+                        const slice = f.slice(start, end);
+                        const data = await slice.arrayBuffer();
+                        chunks.push({ idx: i, data: new Uint8Array(data) });
+                    }
+
+                    // Send with sliding window
+                    let nextToSend = 0;
+
+                    const sendChunk = (idx) => {
+                        const chunk = chunks[idx];
+                        const header = new ArrayBuffer(4);
+                        new DataView(header).setUint32(0, idx, true);
+                        const combined = new Uint8Array(4 + chunk.data.length);
+                        combined.set(new Uint8Array(header), 0);
+                        combined.set(chunk.data, 4);
+                        ws.send(combined);
+                        bytesSent += chunk.data.length;
+                    };
+
+                    const updateProgress = () => {
+                        const progress = (ackedChunks.size / totalChunks) * 100;
+                        const elapsed = (Date.now() - t0) / 1000;
+                        const speed = bytesSent / elapsed;
+                        bar.style.width = Math.min(99, progress) + '%';
+                        pct.textContent = Math.round(progress) + '%';
+                        spd.textContent = fmt(speed) + '/s';
+                    };
+
+                    // Main send loop with windowing
+                    while (ackedChunks.size < totalChunks) {
+                        // Send up to WINDOW_SIZE chunks ahead of acked
+                        while (nextToSend < totalChunks && (nextToSend - ackedChunks.size) < WINDOW_SIZE) {
+                            sendChunk(nextToSend);
+                            nextToSend++;
+                        }
+
+                        // Wait a bit for ACKs
+                        await new Promise(r => setTimeout(r, 10));
+                        updateProgress();
+
+                        // Timeout check
+                        if (Date.now() - t0 > 300000) {
+                            throw new Error('Transfer timeout');
+                        }
+                    }
+
+                    // All ACKed - finalize
+                    spd.textContent = 'Finalizing...';
+                    ws.send(JSON.stringify({ done: true }));
+
+                    const result = await new Promise((resolve, reject) => {
+                        ws.onmessage = (e) => {
+                            try { resolve(JSON.parse(e.data)); }
+                            catch { resolve({ status: 'success' }); }
+                        };
+                        setTimeout(() => reject(new Error('Finalize timeout')), 60000);
+                    });
+
+                    ws.close();
+
+                    if (result.status === 'success') {
+                        bar.style.width = '100%';
+                        pct.textContent = '100%';
+                        const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
+                        const avg = fmt(f.size / parseFloat(elapsed));
+                        show('ok', '✓ ' + elapsed + 's • ' + avg + '/s');
+                    } else {
+                        show('err', result.error || 'Unknown error');
+                    }
+
+                } catch (e) {
+                    console.error(e);
+                    show('err', '✗ ' + e.message);
+                } finally {
+                    drop.classList.remove('active');
+                }
+            }
+
+            drop.onclick = () => fileInput.click();
+            drop.ondragover = e => { e.preventDefault(); drop.classList.add('over'); };
+            drop.ondragleave = () => drop.classList.remove('over');
+            drop.ondrop = e => { e.preventDefault(); drop.classList.remove('over'); if (e.dataTransfer.files[0]) upload(e.dataTransfer.files[0]); };
+            fileInput.onchange = () => { if (fileInput.files[0]) upload(fileInput.files[0]); };
+        })();
+    </script>
+</body>
+
+</html>
