@@ -70,9 +70,9 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 6rem;
+            font-size: 5rem;
             font-weight: 900;
-            color: rgba(255, 255, 255, 0.06);
+            color: rgba(255, 255, 255, 0.08);
             pointer-events: none;
             opacity: 0;
             transition: opacity 0.5s;
@@ -84,7 +84,7 @@
 
         .hint {
             position: absolute;
-            bottom: 100px;
+            bottom: 140px;
             font-size: 0.75rem;
             font-weight: 700;
             color: rgba(255, 255, 255, 0.25);
@@ -100,7 +100,7 @@
 
         .status {
             position: absolute;
-            bottom: 60px;
+            bottom: 100px;
             font-size: 0.7rem;
             font-weight: 600;
             color: rgba(255, 255, 255, 0.4);
@@ -116,34 +116,52 @@
 
         .recents {
             position: absolute;
-            bottom: 20px;
+            bottom: 24px;
             width: calc(100% - 48px);
-            max-width: 280px;
+            max-width: 300px;
+        }
+
+        .recent-header {
+            font-size: 0.55rem;
+            color: rgba(255, 255, 255, 0.2);
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            text-align: center;
+            margin-bottom: 8px;
         }
 
         .recent-item {
             display: flex;
             align-items: center;
-            gap: 8px;
-            padding: 8px 12px;
+            gap: 10px;
+            padding: 10px 14px;
             background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 8px;
-            margin-bottom: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 10px;
+            margin-bottom: 6px;
         }
 
         .recent-icon {
-            opacity: 0.5;
+            font-size: 0.9rem;
         }
 
         .recent-name {
             flex: 1;
-            font-size: 0.65rem;
+            font-size: 0.7rem;
             font-weight: 600;
-            color: rgba(255, 255, 255, 0.6);
+            color: rgba(255, 255, 255, 0.7);
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+        }
+
+        .recent-badge {
+            font-size: 0.5rem;
+            padding: 3px 8px;
+            border-radius: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-weight: 700;
         }
 
         input[type="file"] {
@@ -170,7 +188,6 @@
         (function () {
             'use strict';
 
-            // Elements
             const canvas = document.getElementById('vfx');
             const ctx = canvas.getContext('2d');
             const fileInput = document.getElementById('fileInput');
@@ -183,7 +200,6 @@
             let W, H, cx, cy;
             const RADIUS = 70;
 
-            // HSL to RGB helper
             function hslToRgb(h, s, l) {
                 s /= 100; l /= 100;
                 const k = n => (n + h / 30) % 12;
@@ -198,12 +214,10 @@
                 return `rgba(${r}, ${g}, ${b}, ${alpha})`;
             }
 
-            // State
-            let state = 'idle'; // idle, transfer, burst
+            let state = 'idle';
             let progress = 0;
             let burstR = 0;
 
-            // Resize
             function resize() {
                 W = canvas.width = window.innerWidth;
                 H = canvas.height = window.innerHeight;
@@ -213,13 +227,11 @@
             window.addEventListener('resize', resize);
             resize();
 
-            // Draw breathing ring
             function drawRing() {
                 const t = performance.now() * 0.001;
                 const breathe = 1 + Math.sin(t * 2) * 0.08;
                 const r = RADIUS * breathe;
 
-                // Glow
                 const glow = ctx.createRadialGradient(cx, cy, r * 0.3, cx, cy, r * 1.8);
                 glow.addColorStop(0, getColor(0, 0.15));
                 glow.addColorStop(0.5, getColor(60, 0.08));
@@ -229,28 +241,24 @@
                 ctx.fillStyle = glow;
                 ctx.fill();
 
-                // Main ring
                 ctx.beginPath();
                 ctx.arc(cx, cy, r, 0, Math.PI * 2);
                 ctx.strokeStyle = getColor(0, 0.6);
                 ctx.lineWidth = 3;
                 ctx.stroke();
 
-                // Second ring
                 ctx.beginPath();
                 ctx.arc(cx, cy, r + 15, 0, Math.PI * 2);
                 ctx.strokeStyle = getColor(90, 0.3);
                 ctx.lineWidth = 1;
                 ctx.stroke();
 
-                // Third ring
                 ctx.beginPath();
                 ctx.arc(cx, cy, r + 25, 0, Math.PI * 2);
                 ctx.strokeStyle = getColor(180, 0.15);
                 ctx.lineWidth = 1;
                 ctx.stroke();
 
-                // Progress arc
                 if (progress > 0 && state === 'transfer') {
                     ctx.beginPath();
                     ctx.arc(cx, cy, r + 8, -Math.PI / 2, -Math.PI / 2 + (Math.PI * 2 * progress / 100));
@@ -261,36 +269,6 @@
                 }
             }
 
-            // Draw beam
-            function drawBeam() {
-                const t = performance.now() * 0.002;
-                const beamW = 40 + Math.sin(t * 3) * 15;
-
-                // Beam gradient
-                const grad = ctx.createLinearGradient(cx - beamW, 0, cx + beamW, 0);
-                grad.addColorStop(0, 'transparent');
-                grad.addColorStop(0.3, getColor(0, 0.2));
-                grad.addColorStop(0.5, getColor(120, 0.4));
-                grad.addColorStop(0.7, getColor(240, 0.2));
-                grad.addColorStop(1, 'transparent');
-
-                ctx.fillStyle = grad;
-                ctx.fillRect(cx - beamW, 0, beamW * 2, H);
-
-                // Hot core
-                ctx.save();
-                ctx.shadowBlur = 20;
-                ctx.shadowColor = '#fff';
-                const coreGrad = ctx.createLinearGradient(cx - 5, 0, cx + 5, 0);
-                coreGrad.addColorStop(0, 'transparent');
-                coreGrad.addColorStop(0.5, 'rgba(255,255,255,0.7)');
-                coreGrad.addColorStop(1, 'transparent');
-                ctx.fillStyle = coreGrad;
-                ctx.fillRect(cx - 5, 0, 10, H);
-                ctx.restore();
-            }
-
-            // Draw burst
             function drawBurst() {
                 burstR += (250 - burstR) * 0.08;
                 const alpha = 1 - burstR / 250;
@@ -309,17 +287,13 @@
                 }
             }
 
-            // Render loop
             function render() {
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
                 ctx.fillRect(0, 0, W, H);
 
-                if (state === 'idle') {
-                    drawRing();
-                } else if (state === 'transfer') {
-                    drawBeam();
-                    drawRing();
-                } else if (state === 'burst') {
+                drawRing();
+
+                if (state === 'burst') {
                     drawBurst();
                 }
 
@@ -327,7 +301,6 @@
             }
             render();
 
-            // Interaction
             hintEl.addEventListener('click', () => {
                 if (state === 'idle') fileInput.click();
             });
@@ -336,7 +309,6 @@
                 if (state === 'idle') fileInput.click();
             });
 
-            // WebSocket
             const recents = [];
             let ws = null;
             let uploadData = null;
@@ -350,13 +322,18 @@
 
             const addRecent = (name, type) => {
                 recents.unshift({ name, type });
-                if (recents.length > 2) recents.pop();
-                recentsDiv.innerHTML = recents.map(r => `
-                <div class="recent-item">
-                    <div class="recent-icon">${r.type === 'sent' ? '↑' : '↓'}</div>
+                if (recents.length > 3) recents.pop();
+                const html = recents.length > 0 ? '<div class="recent-header">Recent</div>' + recents.map(r => {
+                    const isSent = r.type === 'sent';
+                    const color = isSent ? '#10b981' : '#3b82f6';
+                    const bg = isSent ? 'rgba(16,185,129,0.12)' : 'rgba(59,130,246,0.12)';
+                    return `<div class="recent-item">
+                    <div class="recent-icon" style="color:${color}">${isSent ? '↑' : '↓'}</div>
                     <div class="recent-name">${r.name}</div>
-                </div>
-            `).join('');
+                    <div class="recent-badge" style="background:${bg};color:${color}">${r.type}</div>
+                </div>`;
+                }).join('') : '';
+                recentsDiv.innerHTML = html;
             };
 
             const reset = () => {
