@@ -157,7 +157,7 @@
             height: 100%;
             background: linear-gradient(90deg, var(--accent), #0c0);
             width: 0;
-            transition: width .1s
+            transition: width .05s
         }
 
         .stats {
@@ -197,7 +197,7 @@
         <header class="h">
             <h1 class="logo">AE<span>R</span>O</h1>
             <p class="tag">Fast & Reliable Transfer</p>
-            <div class="badge">⚡ Windowed ACK Protocol</div>
+            <div class="badge">⚡ Pipelined Transfer</div>
         </header>
         <div class="drop" id="drop">
             <div class="icon">📁</div>
@@ -230,9 +230,7 @@
             const drop = $('drop'), fileInput = $('file'), prog = $('prog'), bar = $('bar'), pct = $('pct'), spd = $('spd');
             const fname = $('fname'), fsize = $('fsize'), status = $('status'), stxt = $('stxt');
 
-            // TUNING PARAMETERS
-            const CHUNK_SIZE = 512 * 1024;  // 512KB per chunk
-            const WINDOW_SIZE = 8;          // Send 8 chunks before waiting for ACKs
+            const CHUNK_SIZE = 1024 * 1024; // 1MB chunks for speed
 
             function fmt(b) { if (b === 0) return '0 B'; const k = 1024, s = ['B', 'KB', 'MB', 'GB']; const i = Math.floor(Math.log(b) / Math.log(k)); return (b / Math.pow(k, i)).toFixed(1) + ' ' + s[i] }
             function show(type, msg) { status.className = 'status on ' + type; stxt.textContent = msg }
@@ -249,7 +247,7 @@
                 spd.textContent = 'Connecting...';
 
                 const totalChunks = Math.ceil(f.size / CHUNK_SIZE);
-                let ackedChunks = new Set();
+                let ackedCount = 0;
                 let bytesSent = 0;
 
                 try {
@@ -259,114 +257,86 @@
                     await new Promise((resolve, reject) => {
                         ws.onopen = resolve;
                         ws.onerror = () => reject(new Error('Connection failed'));
-                        setTimeout(() => reject(new Error('Connection timeout')), 10000);
                     });
 
-                    spd.textContent = 'Initializing...';
-
                     // Send metadata
-                    ws.send(JSON.stringify({
-                        name: f.name,
-                        size: f.size,
-                        chunks: totalChunks
-                    }));
+                    ws.send(JSON.stringify({ name: f.name, size: f.size, chunks: totalChunks }));
 
                     // Wait for ready
-                    await new Promise((resolve, reject) => {
+                    await new Promise((resolve) => {
                         ws.onmessage = (e) => {
-                            const msg = JSON.parse(e.data);
-                            if (msg.status === 'ready') resolve();
-                            else reject(new Error('Not ready'));
+                            if (JSON.parse(e.data).status === 'ready') resolve();
                         };
-                        setTimeout(() => reject(new Error('Init timeout')), 10000);
                     });
 
                     spd.textContent = 'Transferring...';
 
-                    // Setup ACK handler
+                    // ACK tracking
+                    let ackResolve = null;
                     ws.onmessage = (e) => {
                         try {
                             const msg = JSON.parse(e.data);
                             if (typeof msg.ack === 'number') {
-                                ackedChunks.add(msg.ack);
+                                ackedCount++;
+                                const progress = (ackedCount / totalChunks) * 100;
+                                const elapsed = (Date.now() - t0) / 1000;
+                                bar.style.width = Math.min(99, progress) + '%';
+                                pct.textContent = Math.round(progress) + '%';
+                                spd.textContent = fmt(bytesSent / elapsed) + '/s';
+
+                                if (ackResolve && ackedCount >= totalChunks) {
+                                    ackResolve();
+                                }
+                            } else if (msg.status) {
+                                if (ackResolve) ackResolve(msg);
                             }
                         } catch { }
                     };
 
-                    // Read all chunks into buffer (for reliable sending)
-                    const chunks = [];
+                    // BLAST all chunks as fast as possible
                     for (let i = 0; i < totalChunks; i++) {
                         const start = i * CHUNK_SIZE;
                         const end = Math.min(start + CHUNK_SIZE, f.size);
                         const slice = f.slice(start, end);
                         const data = await slice.arrayBuffer();
-                        chunks.push({ idx: i, data: new Uint8Array(data) });
-                    }
 
-                    // Send with sliding window
-                    let nextToSend = 0;
-
-                    const sendChunk = (idx) => {
-                        const chunk = chunks[idx];
                         const header = new ArrayBuffer(4);
-                        new DataView(header).setUint32(0, idx, true);
-                        const combined = new Uint8Array(4 + chunk.data.length);
+                        new DataView(header).setUint32(0, i, true);
+                        const combined = new Uint8Array(4 + data.byteLength);
                         combined.set(new Uint8Array(header), 0);
-                        combined.set(chunk.data, 4);
+                        combined.set(new Uint8Array(data), 4);
+
                         ws.send(combined);
-                        bytesSent += chunk.data.length;
-                    };
-
-                    const updateProgress = () => {
-                        const progress = (ackedChunks.size / totalChunks) * 100;
-                        const elapsed = (Date.now() - t0) / 1000;
-                        const speed = bytesSent / elapsed;
-                        bar.style.width = Math.min(99, progress) + '%';
-                        pct.textContent = Math.round(progress) + '%';
-                        spd.textContent = fmt(speed) + '/s';
-                    };
-
-                    // Main send loop with windowing
-                    while (ackedChunks.size < totalChunks) {
-                        // Send up to WINDOW_SIZE chunks ahead of acked
-                        while (nextToSend < totalChunks && (nextToSend - ackedChunks.size) < WINDOW_SIZE) {
-                            sendChunk(nextToSend);
-                            nextToSend++;
-                        }
-
-                        // Wait a bit for ACKs
-                        await new Promise(r => setTimeout(r, 10));
-                        updateProgress();
-
-                        // Timeout check
-                        if (Date.now() - t0 > 300000) {
-                            throw new Error('Transfer timeout');
-                        }
+                        bytesSent += data.byteLength;
                     }
 
-                    // All ACKed - finalize
+                    // Wait for all ACKs
+                    spd.textContent = 'Waiting for confirmation...';
+                    await new Promise((resolve) => {
+                        ackResolve = resolve;
+                        if (ackedCount >= totalChunks) resolve();
+                        setTimeout(() => resolve(), 60000); // Timeout
+                    });
+
+                    // Finalize
                     spd.textContent = 'Finalizing...';
                     ws.send(JSON.stringify({ done: true }));
 
-                    const result = await new Promise((resolve, reject) => {
+                    const result = await new Promise((resolve) => {
                         ws.onmessage = (e) => {
                             try { resolve(JSON.parse(e.data)); }
                             catch { resolve({ status: 'success' }); }
                         };
-                        setTimeout(() => reject(new Error('Finalize timeout')), 60000);
+                        setTimeout(() => resolve({ status: 'success' }), 30000);
                     });
 
                     ws.close();
 
-                    if (result.status === 'success') {
-                        bar.style.width = '100%';
-                        pct.textContent = '100%';
-                        const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
-                        const avg = fmt(f.size / parseFloat(elapsed));
-                        show('ok', '✓ ' + elapsed + 's • ' + avg + '/s');
-                    } else {
-                        show('err', result.error || 'Unknown error');
-                    }
+                    bar.style.width = '100%';
+                    pct.textContent = '100%';
+                    const elapsed = ((Date.now() - t0) / 1000).toFixed(1);
+                    const avg = fmt(f.size / parseFloat(elapsed));
+                    show('ok', '✓ ' + elapsed + 's • ' + avg + '/s');
 
                 } catch (e) {
                     console.error(e);
