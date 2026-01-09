@@ -48,9 +48,7 @@
             max-width: 320px;
         }
 
-        /* ═══════════════════════════════════════════
-           SACRED LOGO - NEVER CHANGE
-           ═══════════════════════════════════════════ */
+        /* SACRED LOGO */
         .logo {
             font-size: 2rem;
             font-weight: 600;
@@ -89,9 +87,7 @@
             }
         }
 
-        /* ═══════════════════════════════════════════
-           THE ORB - Clean, Centered, Vibrant
-           ═══════════════════════════════════════════ */
+        /* THE ORB */
         .orb {
             position: relative;
             width: 200px;
@@ -99,7 +95,6 @@
             cursor: pointer;
         }
 
-        /* Glow behind */
         .orb-glow {
             position: absolute;
             inset: -30px;
@@ -128,7 +123,6 @@
             }
         }
 
-        /* Outer ring */
         .orb-ring {
             position: absolute;
             inset: 0;
@@ -141,7 +135,6 @@
             border-color: rgba(255, 255, 255, 0.15);
         }
 
-        /* Progress ring */
         .progress-svg {
             position: absolute;
             inset: 0;
@@ -171,7 +164,6 @@
             filter: drop-shadow(0 0 8px var(--blue));
         }
 
-        /* Center content */
         .orb-center {
             position: absolute;
             inset: 20px;
@@ -218,9 +210,7 @@
             font-weight: 400;
         }
 
-        /* ═══════════════════════════════════════════
-           STATS - Only visible during transfer
-           ═══════════════════════════════════════════ */
+        /* STATS */
         .stats {
             margin-top: 32px;
             text-align: center;
@@ -260,9 +250,7 @@
             text-overflow: ellipsis;
         }
 
-        /* ═══════════════════════════════════════════
-           RECENTS - Compact history
-           ═══════════════════════════════════════════ */
+        /* RECENTS */
         .recents {
             width: 100%;
             margin-top: 24px;
@@ -329,6 +317,17 @@
             color: var(--blue);
         }
 
+        /* DEBUG */
+        .debug {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            right: 10px;
+            font-size: 0.5rem;
+            color: rgba(255, 255, 255, 0.3);
+            text-align: center;
+        }
+
         input[type="file"] {
             display: none;
         }
@@ -363,6 +362,8 @@
         <div class="recents" id="recents"></div>
     </div>
 
+    <div class="debug" id="debug">connecting...</div>
+
     <input type="file" id="fileInput" accept="*/*">
 
     <script>
@@ -373,6 +374,7 @@
             const logoDot = $('logoDot'), progressFill = $('progressFill');
             const stats = $('stats'), statPercent = $('statPercent'), statSpeed = $('statSpeed'), statFile = $('statFile');
             const recentsDiv = $('recents');
+            const debugDiv = $('debug');
 
             const circumference = 2 * Math.PI * 99;
             progressFill.style.strokeDasharray = circumference;
@@ -381,10 +383,22 @@
             const recents = [];
             const MAX_RECENTS = 5;
 
-            // State
+            // State machine
+            const STATE = {
+                IDLE: 'idle',
+                UPLOADING: 'uploading',
+                RECEIVING: 'receiving'
+            };
+
+            let currentState = STATE.IDLE;
+            let uploadData = null;
+            let receiveData = null;
             let ws = null;
-            let uploadState = null; // { acked, total, done }
-            let receiveState = null; // { chunks, meta }
+
+            const log = (msg) => {
+                console.log('[AERO]', msg);
+                debugDiv.textContent = msg;
+            };
 
             const fmt = b => {
                 if (!b) return '0 B';
@@ -396,13 +410,12 @@
                 progressFill.style.strokeDashoffset = circumference - (pct / 100) * circumference;
             };
 
-            const setMode = mode => {
-                const isReceive = mode === 'receive';
-                logoDot.classList.toggle('receive', isReceive);
-                orbGlow.classList.toggle('receive', isReceive);
-                progressFill.classList.toggle('receive', isReceive);
-                statPercent.classList.toggle('receive', isReceive);
-                orb.classList.toggle('receive', isReceive);
+            const setReceiveMode = (on) => {
+                logoDot.classList.toggle('receive', on);
+                orbGlow.classList.toggle('receive', on);
+                progressFill.classList.toggle('receive', on);
+                statPercent.classList.toggle('receive', on);
+                orb.classList.toggle('receive', on);
             };
 
             const addRecent = (name, type) => {
@@ -426,96 +439,103 @@
             };
 
             const resetToIdle = () => {
-                setMode('send');
+                currentState = STATE.IDLE;
+                setReceiveMode(false);
                 orb.classList.remove('success');
                 orbIcon.textContent = '↑';
                 orbText.textContent = 'tap to send';
                 stats.classList.remove('visible');
                 setProgress(0);
-                uploadState = null;
-                receiveState = null;
+                uploadData = null;
+                receiveData = null;
+                log('ready');
             };
 
             // ═══════════════════════════════════════════
-            // SINGLE PERSISTENT MESSAGE ROUTER
+            // MESSAGE HANDLER - Routes all messages
             // ═══════════════════════════════════════════
             const handleMessage = (e) => {
-                // Binary = chunk data
+                // Binary data = chunk (either upload ACK context or receive context)
                 if (e.data instanceof ArrayBuffer) {
-                    if (receiveState) {
+                    // Only process binary if we're RECEIVING from PC
+                    if (currentState === STATE.RECEIVING && receiveData) {
                         const view = new DataView(e.data);
                         const idx = view.getUint32(0, true);
-                        const data = new Uint8Array(e.data, 4);
-                        receiveState.chunks[idx] = data;
+                        const chunk = new Uint8Array(e.data, 4);
+                        receiveData.chunks[idx] = chunk;
 
-                        const received = receiveState.chunks.filter(c => c).length;
-                        const pct = (received / receiveState.meta.chunks) * 100;
+                        const received = receiveData.chunks.filter(c => c).length;
+                        const pct = (received / receiveData.meta.chunks) * 100;
                         setProgress(Math.min(99, pct));
                         statPercent.textContent = Math.round(pct) + '%';
+                        log(`recv chunk ${idx}/${receiveData.meta.chunks}`);
 
+                        // Send ACK back to server
                         ws.send(JSON.stringify({ ack: idx }));
                     }
                     return;
                 }
 
-                // Text = JSON message
+                // Text = JSON
                 try {
                     const msg = JSON.parse(e.data);
+                    log('msg: ' + JSON.stringify(msg).substring(0, 50));
 
-                    // Server ready for upload
-                    if (msg.status === 'ready' && uploadState) {
-                        uploadState.ready = true;
-                    }
-
-                    // ACK from server during upload
-                    if (typeof msg.ack === 'number' && uploadState) {
-                        uploadState.acked++;
-                        const pct = Math.min(99, (uploadState.acked / uploadState.total) * 100);
-                        setProgress(pct);
-                        statPercent.textContent = Math.round(pct) + '%';
-                        statSpeed.textContent = fmt(uploadState.sent / ((Date.now() - uploadState.t0) / 1000)) + '/s';
-
-                        if (uploadState.acked >= uploadState.total && uploadState.doneResolve) {
-                            uploadState.doneResolve();
+                    // === UPLOAD RELATED ===
+                    if (currentState === STATE.UPLOADING && uploadData) {
+                        if (msg.status === 'ready') {
+                            uploadData.ready = true;
                         }
+                        if (typeof msg.ack === 'number') {
+                            uploadData.acked++;
+                            const pct = Math.min(99, (uploadData.acked / uploadData.total) * 100);
+                            setProgress(pct);
+                            statPercent.textContent = Math.round(pct) + '%';
+                            statSpeed.textContent = fmt(uploadData.sent / ((Date.now() - uploadData.t0) / 1000)) + '/s';
+
+                            if (uploadData.acked >= uploadData.total && uploadData.doneResolve) {
+                                uploadData.doneResolve();
+                            }
+                        }
+                        if (msg.status === 'success') {
+                            setProgress(100);
+                            statPercent.textContent = '100%';
+                            orb.classList.add('success');
+                            orbIcon.textContent = '✓';
+                            orbText.textContent = 'sent';
+                            const sec = ((Date.now() - uploadData.t0) / 1000).toFixed(1);
+                            statSpeed.textContent = sec + 's';
+                            addRecent(uploadData.name, 'sent');
+                            setTimeout(resetToIdle, 2000);
+                        }
+                        return; // Don't process receive messages during upload
                     }
 
-                    // Upload complete confirmation
-                    if (msg.status === 'success' && uploadState) {
-                        setProgress(100);
-                        statPercent.textContent = '100%';
-                        orb.classList.add('success');
-                        orbIcon.textContent = '✓';
-                        orbText.textContent = 'sent';
-                        const sec = ((Date.now() - uploadState.t0) / 1000).toFixed(1);
-                        statSpeed.textContent = sec + 's';
-                        addRecent(uploadState.name, 'sent');
-                        setTimeout(resetToIdle, 2000);
-                    }
-
-                    // Incoming file from PC
+                    // === RECEIVE RELATED (from PC) ===
                     if (msg.type === 'file_incoming') {
-                        receiveState = {
+                        log('incoming file: ' + msg.name);
+                        currentState = STATE.RECEIVING;
+                        receiveData = {
                             meta: { name: msg.name, size: msg.size, chunks: msg.chunks },
                             chunks: new Array(msg.chunks)
                         };
-                        setMode('receive');
+                        setReceiveMode(true);
                         stats.classList.add('visible');
                         orbIcon.textContent = '↓';
                         orbText.textContent = 'receiving';
                         statFile.textContent = msg.name;
                         statPercent.textContent = '0%';
-                        statSpeed.textContent = 'from PC...';
+                        statSpeed.textContent = 'from PC';
                         setProgress(0);
                     }
 
-                    // File complete from PC
-                    if (msg.type === 'file_complete' && receiveState) {
-                        const blob = new Blob(receiveState.chunks);
+                    if (msg.type === 'file_complete' && currentState === STATE.RECEIVING && receiveData) {
+                        log('file complete, downloading...');
+                        const blob = new Blob(receiveData.chunks);
                         const url = URL.createObjectURL(blob);
                         const a = document.createElement('a');
                         a.href = url;
-                        a.download = receiveState.meta.name;
+                        a.download = receiveData.meta.name;
                         document.body.appendChild(a);
                         a.click();
                         document.body.removeChild(a);
@@ -527,33 +547,49 @@
                         orbIcon.textContent = '✓';
                         orbText.textContent = 'saved';
                         statSpeed.textContent = 'downloaded';
-                        addRecent(receiveState.meta.name, 'received');
+                        addRecent(receiveData.meta.name, 'received');
                         setTimeout(resetToIdle, 2000);
                     }
 
                 } catch (err) {
-                    console.error('Parse error:', err);
+                    log('parse error: ' + err.message);
                 }
             };
 
             const connect = () => {
+                log('connecting...');
                 ws = new WebSocket(`ws://${location.host}/transfer`);
                 ws.binaryType = 'arraybuffer';
-                ws.onmessage = handleMessage; // SINGLE PERSISTENT HANDLER
-                ws.onclose = () => setTimeout(connect, 2000);
+                ws.onopen = () => log('connected');
+                ws.onmessage = handleMessage;
+                ws.onclose = () => {
+                    log('disconnected, reconnecting...');
+                    setTimeout(connect, 2000);
+                };
+                ws.onerror = (e) => log('ws error');
             };
 
             connect();
-            orb.onclick = () => fileInput.click();
+            orb.onclick = () => {
+                if (currentState === STATE.IDLE) {
+                    fileInput.click();
+                }
+            };
 
             // ═══════════════════════════════════════════
             // UPLOAD FUNCTION
             // ═══════════════════════════════════════════
             async function upload(file) {
+                if (currentState !== STATE.IDLE) {
+                    log('busy, cannot upload');
+                    return;
+                }
+
+                currentState = STATE.UPLOADING;
                 const CHUNK = 1024 * 1024;
                 const total = Math.ceil(file.size / CHUNK);
 
-                uploadState = {
+                uploadData = {
                     name: file.name,
                     total,
                     acked: 0,
@@ -563,7 +599,7 @@
                     doneResolve: null
                 };
 
-                setMode('send');
+                setReceiveMode(false);
                 orb.classList.remove('success');
                 stats.classList.add('visible');
                 orbIcon.textContent = '↑';
@@ -572,18 +608,22 @@
                 statPercent.textContent = '0%';
                 statSpeed.textContent = 'connecting...';
                 setProgress(0);
+                log('starting upload: ' + file.name);
 
                 try {
-                    // Send init
                     ws.send(JSON.stringify({ name: file.name, size: file.size, chunks: total }));
 
                     // Wait for ready
-                    await new Promise(r => {
-                        const check = () => uploadState.ready ? r() : setTimeout(check, 10);
+                    await new Promise((resolve, reject) => {
+                        const check = () => {
+                            if (uploadData.ready) resolve();
+                            else setTimeout(check, 10);
+                        };
                         check();
-                        setTimeout(r, 10000); // Timeout
+                        setTimeout(() => reject(new Error('timeout')), 10000);
                     });
 
+                    log('server ready, sending chunks...');
                     statSpeed.textContent = 'transferring...';
 
                     // Send all chunks
@@ -595,21 +635,23 @@
                         c.set(new Uint8Array(h), 0);
                         c.set(new Uint8Array(d), 4);
                         ws.send(c);
-                        uploadState.sent += d.byteLength;
+                        uploadData.sent += d.byteLength;
                     }
 
-                    // Wait for all ACKs
+                    log('all chunks sent, waiting for ACKs...');
                     statSpeed.textContent = 'verifying...';
-                    await new Promise(r => {
-                        uploadState.doneResolve = r;
-                        if (uploadState.acked >= total) r();
-                        setTimeout(r, 60000);
+
+                    await new Promise((resolve) => {
+                        uploadData.doneResolve = resolve;
+                        if (uploadData.acked >= total) resolve();
+                        setTimeout(resolve, 60000);
                     });
 
-                    // Signal done
+                    log('sending done signal');
                     ws.send(JSON.stringify({ done: true }));
 
                 } catch (e) {
+                    log('upload error: ' + e.message);
                     orbIcon.textContent = '✗';
                     orbText.textContent = 'failed';
                     statSpeed.textContent = e.message;
@@ -617,7 +659,10 @@
                 }
             }
 
-            fileInput.onchange = () => { if (fileInput.files[0]) upload(fileInput.files[0]); };
+            fileInput.onchange = () => {
+                if (fileInput.files[0]) upload(fileInput.files[0]);
+                fileInput.value = ''; // Reset so same file can be selected again
+            };
         })();
     </script>
 </body>
