@@ -10,8 +10,16 @@ export function GetServerStatus() {
   return window['go']['main']['App']['GetServerStatus']();
 }
 
+export function IsPhoneConnected() {
+  return window['go']['main']['App']['IsPhoneConnected']();
+}
+
 export function OpenDownloadsFolder() {
   return window['go']['main']['App']['OpenDownloadsFolder']();
+}
+
+export function SendFileToPhone() {
+  return window['go']['main']['App']['SendFileToPhone']();
 }
 
 export function StartServer(arg1) {

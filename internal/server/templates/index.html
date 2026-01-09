@@ -11,6 +11,8 @@
             --bg: #050505;
             --accent: #22c55e;
             --accent-dim: rgba(34, 197, 94, 0.15);
+            --accent-blue: #3b82f6;
+            --accent-blue-dim: rgba(59, 130, 246, 0.15);
             --text: #fff;
             --text-dim: rgba(255, 255, 255, 0.4);
         }
@@ -36,7 +38,6 @@
             overflow: hidden;
         }
 
-        /* Ambient glow */
         .ambient {
             position: fixed;
             width: 500px;
@@ -49,6 +50,11 @@
             opacity: 0.5;
             animation: breathe 6s ease-in-out infinite;
             pointer-events: none;
+            transition: background 0.5s ease;
+        }
+
+        .ambient.receive {
+            background: radial-gradient(circle, var(--accent-blue-dim), transparent 70%);
         }
 
         @keyframes breathe {
@@ -75,7 +81,6 @@
             max-width: 340px;
         }
 
-        /* Logo */
         .logo {
             font-size: 2.2rem;
             font-weight: 600;
@@ -92,6 +97,11 @@
             margin-left: 1px;
             vertical-align: super;
             animation: pulse 2s ease-in-out infinite;
+            transition: background 0.3s ease;
+        }
+
+        .logo-dot.receive {
+            background: var(--accent-blue);
         }
 
         @keyframes pulse {
@@ -108,7 +118,7 @@
             }
         }
 
-        /* Central Orb - The main interaction area */
+        /* Orb */
         .orb-container {
             position: relative;
             width: 200px;
@@ -116,7 +126,6 @@
             cursor: pointer;
         }
 
-        /* Orbital rings */
         .ring {
             position: absolute;
             border-radius: 50%;
@@ -136,11 +145,6 @@
             inset: 40px;
         }
 
-        .orb-container:hover .ring {
-            border-color: rgba(255, 255, 255, 0.1);
-        }
-
-        /* Progress ring - SVG circle */
         .progress-ring {
             position: absolute;
             inset: 0;
@@ -161,57 +165,32 @@
             stroke: var(--accent);
             stroke-dasharray: 628;
             stroke-dashoffset: 628;
-            transition: stroke-dashoffset 0.3s ease;
+            transition: stroke-dashoffset 0.3s ease, stroke 0.3s ease;
             filter: drop-shadow(0 0 8px var(--accent));
         }
 
-        /* Center content */
-        .orb-center {
-            position: absolute;
-            inset: 40px;
-            background: rgba(255, 255, 255, 0.02);
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            border-radius: 50%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.4s ease;
+        .progress-ring .fill.receive {
+            stroke: var(--accent-blue);
+            filter: drop-shadow(0 0 8px var(--accent-blue));
         }
 
-        .orb-container:hover .orb-center {
-            background: rgba(255, 255, 255, 0.04);
-            transform: scale(1.02);
-        }
-
-        .orb-icon {
-            font-size: 2rem;
-            margin-bottom: 8px;
-            transition: transform 0.3s ease;
-        }
-
-        .orb-container:hover .orb-icon {
-            transform: translateY(-4px);
-        }
-
-        .orb-text {
-            font-size: 0.75rem;
-            color: var(--text-dim);
-            font-weight: 300;
-        }
-
-        /* Transferring state - orbiting particle */
         .particle {
             position: absolute;
             width: 6px;
             height: 6px;
             background: var(--accent);
             border-radius: 50%;
-            box-shadow: 0 0 12px var(--accent), 0 0 24px var(--accent);
+            box-shadow: 0 0 12px var(--accent);
             opacity: 0;
             top: 50%;
             left: 50%;
             margin: -3px 0 0 -3px;
+            transition: background 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .particle.receive {
+            background: var(--accent-blue);
+            box-shadow: 0 0 12px var(--accent-blue);
         }
 
         .orb-container.transferring .particle {
@@ -229,7 +208,6 @@
             }
         }
 
-        /* Second particle, offset */
         .particle-2 {
             animation-delay: 0.5s !important;
         }
@@ -238,7 +216,43 @@
             animation-delay: 1s !important;
         }
 
-        /* Stats below orb */
+        .orb-center {
+            position: absolute;
+            inset: 40px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.4s ease;
+        }
+
+        .orb-icon {
+            font-size: 2rem;
+            margin-bottom: 8px;
+            transition: transform 0.3s ease;
+        }
+
+        .orb-text {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            font-weight: 300;
+        }
+
+        /* Success/Receive states */
+        .orb-container.success .orb-center {
+            background: var(--accent-dim);
+            border-color: rgba(34, 197, 94, 0.3);
+        }
+
+        .orb-container.receiving .orb-center {
+            background: var(--accent-blue-dim);
+            border-color: rgba(59, 130, 246, 0.3);
+        }
+
+        /* Stats */
         .stats {
             margin-top: 32px;
             text-align: center;
@@ -256,6 +270,11 @@
             font-size: 2rem;
             font-weight: 500;
             color: var(--accent);
+            transition: color 0.3s ease;
+        }
+
+        .stat-percent.receive {
+            color: var(--accent-blue);
         }
 
         .stat-speed {
@@ -275,17 +294,6 @@
             text-overflow: ellipsis;
         }
 
-        /* Success state */
-        .orb-container.success .orb-center {
-            background: var(--accent-dim);
-            border-color: rgba(34, 197, 94, 0.3);
-        }
-
-        .orb-container.success .orb-icon {
-            color: var(--accent);
-        }
-
-        /* Footer */
         .footer {
             position: fixed;
             bottom: 24px;
@@ -298,14 +306,56 @@
         input[type="file"] {
             display: none;
         }
+
+        /* Incoming file notification */
+        .incoming {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 100;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+
+        .incoming.visible {
+            display: flex;
+        }
+
+        .incoming-title {
+            font-size: 1.2rem;
+            margin-bottom: 8px;
+        }
+
+        .incoming-file {
+            font-size: 0.9rem;
+            color: var(--accent-blue);
+            margin-bottom: 24px;
+        }
+
+        .incoming-btn {
+            background: var(--accent-blue);
+            color: white;
+            border: none;
+            padding: 12px 32px;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-family: inherit;
+            cursor: pointer;
+        }
     </style>
 </head>
 
 <body>
-    <div class="ambient"></div>
+    <div class="ambient" id="ambient"></div>
 
     <div class="container">
-        <h1 class="logo">aero<span class="logo-dot"></span></h1>
+        <h1 class="logo">aero<span class="logo-dot" id="logoDot"></span></h1>
 
         <div class="orb-container" id="orb">
             <div class="ring ring-1"></div>
@@ -317,9 +367,9 @@
                 <circle class="fill" id="progressCircle" cx="100" cy="100" r="99" />
             </svg>
 
-            <div class="particle"></div>
-            <div class="particle particle-2"></div>
-            <div class="particle particle-3"></div>
+            <div class="particle" id="p1"></div>
+            <div class="particle particle-2" id="p2"></div>
+            <div class="particle particle-3" id="p3"></div>
 
             <div class="orb-center">
                 <div class="orb-icon" id="orbIcon">↑</div>
@@ -334,7 +384,7 @@
         </div>
     </div>
 
-    <div class="footer">LOCAL • PRIVATE • INSTANT</div>
+    <div class="footer">LOCAL • PRIVATE • BIDIRECTIONAL</div>
 
     <input type="file" id="fileInput" accept="*/*">
 
@@ -345,6 +395,8 @@
             const orbIcon = $('orbIcon'), orbText = $('orbText');
             const stats = $('stats'), statPercent = $('statPercent'), statSpeed = $('statSpeed'), statFile = $('statFile');
             const progressCircle = $('progressCircle');
+            const ambient = $('ambient'), logoDot = $('logoDot');
+            const p1 = $('p1'), p2 = $('p2'), p3 = $('p3');
             const circumference = 2 * Math.PI * 99;
 
             progressCircle.style.strokeDasharray = circumference;
@@ -356,11 +408,111 @@
                 return (b / Math.pow(1024, i)).toFixed(1) + ' ' + ['B', 'KB', 'MB', 'GB'][i];
             };
 
-            const setProgress = (pct) => {
-                const offset = circumference - (pct / 100) * circumference;
-                progressCircle.style.strokeDashoffset = offset;
+            const setProgress = pct => {
+                progressCircle.style.strokeDashoffset = circumference - (pct / 100) * circumference;
             };
 
+            const setMode = mode => {
+                const isReceive = mode === 'receive';
+                ambient.classList.toggle('receive', isReceive);
+                logoDot.classList.toggle('receive', isReceive);
+                progressCircle.classList.toggle('receive', isReceive);
+                statPercent.classList.toggle('receive', isReceive);
+                [p1, p2, p3].forEach(p => p.classList.toggle('receive', isReceive));
+            };
+
+            let ws = null;
+            let receiveChunks = [];
+            let receiveMeta = null;
+
+            const connect = () => {
+                ws = new WebSocket(`ws://${location.host}/transfer`);
+                ws.binaryType = 'arraybuffer';
+
+                ws.onopen = () => {
+                    console.log('Connected to AERO');
+                };
+
+                ws.onmessage = e => {
+                    if (typeof e.data === 'string') {
+                        try {
+                            const msg = JSON.parse(e.data);
+
+                            // Incoming file from PC
+                            if (msg.type === 'file_incoming') {
+                                receiveMeta = { name: msg.name, size: msg.size, chunks: msg.chunks };
+                                receiveChunks = new Array(msg.chunks);
+                                setMode('receive');
+                                orb.classList.add('transferring', 'receiving');
+                                orb.classList.remove('success');
+                                stats.classList.add('visible');
+                                orbIcon.textContent = '↓';
+                                orbText.textContent = 'receiving';
+                                statFile.textContent = msg.name;
+                                statPercent.textContent = '0%';
+                                statSpeed.textContent = 'from PC...';
+                                setProgress(0);
+                            }
+
+                            // File complete from PC
+                            if (msg.type === 'file_complete') {
+                                // Assemble and download
+                                const blob = new Blob(receiveChunks);
+                                const url = URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = url;
+                                a.download = receiveMeta.name;
+                                document.body.appendChild(a);
+                                a.click();
+                                document.body.removeChild(a);
+                                URL.revokeObjectURL(url);
+
+                                setProgress(100);
+                                statPercent.textContent = '100%';
+                                orb.classList.remove('transferring', 'receiving');
+                                orb.classList.add('success');
+                                orbIcon.textContent = '✓';
+                                orbText.textContent = 'downloaded';
+                                statSpeed.textContent = 'saved to device';
+
+                                // Reset after delay
+                                setTimeout(() => {
+                                    setMode('send');
+                                    orb.classList.remove('success');
+                                    orbIcon.textContent = '↑';
+                                    orbText.textContent = 'tap to send';
+                                    stats.classList.remove('visible');
+                                    receiveChunks = [];
+                                    receiveMeta = null;
+                                }, 3000);
+                            }
+                        } catch { }
+                    } else if (e.data instanceof ArrayBuffer) {
+                        // Receiving chunk from PC
+                        if (receiveMeta) {
+                            const view = new DataView(e.data);
+                            const idx = view.getUint32(0, true);
+                            const data = new Uint8Array(e.data, 4);
+                            receiveChunks[idx] = data;
+
+                            const received = receiveChunks.filter(c => c).length;
+                            const pct = (received / receiveMeta.chunks) * 100;
+                            setProgress(Math.min(99, pct));
+                            statPercent.textContent = Math.round(pct) + '%';
+
+                            // Send ACK
+                            ws.send(JSON.stringify({ ack: idx }));
+                        }
+                    }
+                };
+
+                ws.onclose = () => {
+                    console.log('Disconnected, reconnecting...');
+                    setTimeout(connect, 2000);
+                };
+            };
+
+            connect();
             orb.onclick = () => fileInput.click();
 
             async function upload(file) {
@@ -369,8 +521,9 @@
                 const total = Math.ceil(file.size / CHUNK);
                 let acked = 0, sent = 0;
 
+                setMode('send');
                 orb.classList.add('transferring');
-                orb.classList.remove('success');
+                orb.classList.remove('success', 'receiving');
                 stats.classList.add('visible');
                 orbIcon.textContent = '↑';
                 orbText.textContent = 'sending';
@@ -380,17 +533,22 @@
                 setProgress(0);
 
                 try {
-                    const ws = new WebSocket(`ws://${location.host}/transfer`);
-                    ws.binaryType = 'arraybuffer';
-                    await new Promise((r, j) => { ws.onopen = r; ws.onerror = j; });
-
                     ws.send(JSON.stringify({ name: file.name, size: file.size, chunks: total }));
-                    await new Promise(r => { ws.onmessage = e => { if (JSON.parse(e.data).status === 'ready') r(); }; });
+
+                    await new Promise(r => {
+                        const handler = e => {
+                            if (JSON.parse(e.data).status === 'ready') {
+                                ws.removeEventListener('message', handler);
+                                r();
+                            }
+                        };
+                        ws.addEventListener('message', handler);
+                    });
 
                     statSpeed.textContent = 'transferring...';
 
                     let done;
-                    ws.onmessage = e => {
+                    const ackHandler = e => {
                         try {
                             const m = JSON.parse(e.data);
                             if (typeof m.ack === 'number') {
@@ -404,6 +562,7 @@
                             } else if (m.status && done) done(m);
                         } catch { }
                     };
+                    ws.addEventListener('message', ackHandler);
 
                     for (let i = 0; i < total; i++) {
                         const d = await file.slice(i * CHUNK, Math.min((i + 1) * CHUNK, file.size)).arrayBuffer();
@@ -417,8 +576,15 @@
                     await new Promise(r => { done = r; if (acked >= total) r(); setTimeout(r, 60000); });
 
                     ws.send(JSON.stringify({ done: true }));
-                    await new Promise(r => { ws.onmessage = () => r(); setTimeout(r, 30000); });
-                    ws.close();
+                    await new Promise(r => {
+                        const h = e => {
+                            try { if (JSON.parse(e.data).status) { ws.removeEventListener('message', h); r(); } } catch { }
+                        };
+                        ws.addEventListener('message', h);
+                        setTimeout(r, 30000);
+                    });
+
+                    ws.removeEventListener('message', ackHandler);
 
                     setProgress(100);
                     statPercent.textContent = '100%';

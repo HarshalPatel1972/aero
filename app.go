@@ -256,3 +256,41 @@ func (a *App) onTransferEvent(event server.TransferEvent) {
 		wailsruntime.EventsEmit(a.ctx, "transfer:progress", event)
 	}
 }
+
+// SendFileToPhone opens a file picker and sends the selected file to the connected phone.
+func (a *App) SendFileToPhone() error {
+	a.serverMu.Lock()
+	if !a.serverRunning || a.server == nil {
+		a.serverMu.Unlock()
+		return fmt.Errorf("server not running")
+	}
+	a.serverMu.Unlock()
+
+	// Open file dialog
+	filePath, err := wailsruntime.OpenFileDialog(a.ctx, wailsruntime.OpenDialogOptions{
+		Title: "Select file to send",
+	})
+	if err != nil {
+		return err
+	}
+	if filePath == "" {
+		return nil // User cancelled
+	}
+
+	// Send via server
+	return a.server.SendFileToPhone(filePath)
+}
+
+// IsPhoneConnected returns true if a phone is currently connected
+func (a *App) IsPhoneConnected() bool {
+	a.serverMu.Lock()
+	defer a.serverMu.Unlock()
+	
+	if !a.serverRunning || a.server == nil {
+		return false
+	}
+	
+	clients := a.server.GetConnectedClients()
+	return len(clients) > 0
+}
+

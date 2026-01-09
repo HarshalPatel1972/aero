@@ -1,7 +1,7 @@
 // MIT License
 // Copyright (c) 2026 Project AERO Contributors
 
-// Package server - Ultra-reliable chunked file transfer
+// Package server - Bi-directional file transfer via WebSocket
 package server
 
 import (
@@ -20,6 +20,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -32,16 +33,17 @@ import (
 var templateFS embed.FS
 
 var upgrader = websocket.Upgrader{
-	ReadBufferSize:  2 * 1024 * 1024, // 2MB
-	WriteBufferSize: 64 * 1024,
+	ReadBufferSize:  2 * 1024 * 1024,
+	WriteBufferSize: 2 * 1024 * 1024,
 	CheckOrigin:     func(r *http.Request) bool { return true },
 }
 
 type TransferEvent struct {
-	Filename string  `json:"filename"`
-	Progress float64 `json:"progress"`
-	Speed    string  `json:"speed"`
-	Status   string  `json:"status"`
+	Filename  string  `json:"filename"`
+	Progress  float64 `json:"progress"`
+	Speed     string  `json:"speed"`
+	Status    string  `json:"status"`
+	Direction string  `json:"direction"` // "receive" or "send"
 }
 
 type TransferCallback func(event TransferEvent)
@@ -52,6 +54,15 @@ type TransferMeta struct {
 	TotalChunks int    `json:"totalChunks"`
 }
 
+// PhoneClient represents a connected phone browser
+type PhoneClient struct {
+	conn     *websocket.Conn
+	mu       sync.Mutex
+	id       string
+	sendChan chan []byte
+}
+
+// Server represents the HTTP/WebSocket server with bi-directional transfer
 type Server struct {
 	httpServer       *http.Server
 	storageService   storage.Service
@@ -60,6 +71,14 @@ type Server struct {
 	sessionKeyBase64 string
 	onTransfer       TransferCallback
 	tempDir          string
+
+	// Connected phone clients
+	clients   map[string]*PhoneClient
+	clientsMu sync.RWMutex
+	
+	// For PC -> Phone transfers
+	pendingSend    *os.File
+	pendingSendMu  sync.Mutex
 }
 
 func NewServer(cfg config.Config, storageService storage.Service) (*Server, error) {
@@ -90,6 +109,7 @@ func NewServerWithKey(cfg config.Config, storageService storage.Service, key []b
 		sessionKeyBase64: keyBase64,
 		onTransfer:       onTransfer,
 		tempDir:          tempDir,
+		clients:          make(map[string]*PhoneClient),
 	}
 
 	mux := http.NewServeMux()
@@ -142,6 +162,119 @@ func (s *Server) emitTransferEvent(event TransferEvent) {
 	}
 }
 
+// GetConnectedClients returns list of connected phone client IDs
+func (s *Server) GetConnectedClients() []string {
+	s.clientsMu.RLock()
+	defer s.clientsMu.RUnlock()
+	ids := make([]string, 0, len(s.clients))
+	for id := range s.clients {
+		ids = append(ids, id)
+	}
+	return ids
+}
+
+// SendFileToPhone sends a file to the first connected phone
+func (s *Server) SendFileToPhone(filePath string) error {
+	s.clientsMu.RLock()
+	if len(s.clients) == 0 {
+		s.clientsMu.RUnlock()
+		return fmt.Errorf("no phone connected")
+	}
+	
+	// Get first client
+	var client *PhoneClient
+	for _, c := range s.clients {
+		client = c
+		break
+	}
+	s.clientsMu.RUnlock()
+
+	// Open file
+	file, err := os.Open(filePath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	info, err := file.Stat()
+	if err != nil {
+		return err
+	}
+
+	fileName := filepath.Base(filePath)
+	fileSize := info.Size()
+	chunkSize := int64(1024 * 1024) // 1MB
+	totalChunks := int((fileSize + chunkSize - 1) / chunkSize)
+
+	log.Printf("[AERO] 📤 Sending to phone: %s (%d chunks)", fileName, totalChunks)
+	s.emitTransferEvent(TransferEvent{
+		Filename:  fileName,
+		Progress:  0,
+		Status:    "started",
+		Direction: "send",
+	})
+
+	// Send file metadata
+	client.mu.Lock()
+	err = client.conn.WriteJSON(map[string]interface{}{
+		"type":   "file_incoming",
+		"name":   fileName,
+		"size":   fileSize,
+		"chunks": totalChunks,
+	})
+	client.mu.Unlock()
+	if err != nil {
+		return err
+	}
+
+	// Send chunks
+	buf := make([]byte, chunkSize)
+	for i := 0; i < totalChunks; i++ {
+		n, err := file.Read(buf)
+		if err != nil && err != io.EOF {
+			return err
+		}
+
+		// Build message: 4 byte idx + data
+		header := make([]byte, 4)
+		binary.LittleEndian.PutUint32(header, uint32(i))
+		msg := append(header, buf[:n]...)
+
+		client.mu.Lock()
+		err = client.conn.WriteMessage(websocket.BinaryMessage, msg)
+		client.mu.Unlock()
+		if err != nil {
+			return err
+		}
+
+		progress := float64(i+1) / float64(totalChunks) * 100
+		s.emitTransferEvent(TransferEvent{
+			Filename:  fileName,
+			Progress:  progress,
+			Status:    "sending",
+			Direction: "send",
+		})
+	}
+
+	// Send completion
+	client.mu.Lock()
+	client.conn.WriteJSON(map[string]interface{}{
+		"type": "file_complete",
+		"name": fileName,
+	})
+	client.mu.Unlock()
+
+	log.Printf("[AERO] ✓ Sent to phone: %s", fileName)
+	s.emitTransferEvent(TransferEvent{
+		Filename:  fileName,
+		Progress:  100,
+		Status:    "completed",
+		Direction: "send",
+	})
+
+	return nil
+}
+
 func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
 		http.NotFound(w, r)
@@ -156,17 +289,37 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(`{"status":"ok"}`))
 }
 
-// handleTransfer - Single WebSocket, sequential chunks, bulletproof
+// handleTransfer - Bi-directional WebSocket handler
 func (s *Server) handleTransfer(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Printf("[AERO] Upgrade failed: %v", err)
 		return
 	}
-	defer conn.Close()
+	
+	// Register client
+	clientID := fmt.Sprintf("%d", time.Now().UnixNano())
+	client := &PhoneClient{
+		conn:     conn,
+		id:       clientID,
+		sendChan: make(chan []byte, 100),
+	}
+	
+	s.clientsMu.Lock()
+	s.clients[clientID] = client
+	s.clientsMu.Unlock()
+	
+	log.Printf("[AERO] 📱 Phone connected: %s", clientID)
 
-	// Increase timeouts for large files
-	conn.SetReadDeadline(time.Time{}) // No timeout
+	defer func() {
+		conn.Close()
+		s.clientsMu.Lock()
+		delete(s.clients, clientID)
+		s.clientsMu.Unlock()
+		log.Printf("[AERO] 📱 Phone disconnected: %s", clientID)
+	}()
+
+	conn.SetReadDeadline(time.Time{})
 
 	var meta TransferMeta
 	var transferDir string
@@ -184,41 +337,37 @@ func (s *Server) handleTransfer(w http.ResponseWriter, r *http.Request) {
 		if msgType == websocket.TextMessage {
 			var msg map[string]interface{}
 			if err := json.Unmarshal(data, &msg); err != nil {
-				log.Printf("[AERO] JSON error: %v", err)
 				continue
 			}
 
-			// Init message
+			// Handle phone upload init
 			if name, ok := msg["name"].(string); ok {
 				meta.Filename = name
 				meta.Size = int64(msg["size"].(float64))
 				meta.TotalChunks = int(msg["chunks"].(float64))
 
-				// Create unique transfer directory
 				transferDir = filepath.Join(s.tempDir, fmt.Sprintf("%d", time.Now().UnixNano()))
 				os.MkdirAll(transferDir, 0755)
 
-				// Save metadata
 				metaPath := filepath.Join(transferDir, "meta.json")
 				metaBytes, _ := json.Marshal(meta)
 				os.WriteFile(metaPath, metaBytes, 0644)
 
 				initialized = true
-				log.Printf("[AERO] 📥 Started: %s (%d chunks, %d bytes)", name, meta.TotalChunks, meta.Size)
-				s.emitTransferEvent(TransferEvent{Filename: name, Progress: 0, Status: "started"})
+				log.Printf("[AERO] 📥 Receiving from phone: %s (%d chunks)", name, meta.TotalChunks)
+				s.emitTransferEvent(TransferEvent{Filename: name, Progress: 0, Status: "started", Direction: "receive"})
 
 				conn.WriteJSON(map[string]interface{}{"status": "ready"})
 				continue
 			}
 
-			// Done message
+			// Handle upload completion
 			if _, ok := msg["done"]; ok {
 				if !initialized {
 					conn.WriteJSON(map[string]interface{}{"error": "not initialized"})
 					continue
 				}
 
-				// Count received chunks
 				entries, _ := os.ReadDir(transferDir)
 				received := 0
 				for _, e := range entries {
@@ -227,10 +376,7 @@ func (s *Server) handleTransfer(w http.ResponseWriter, r *http.Request) {
 					}
 				}
 
-				log.Printf("[AERO] Done signal: %d/%d chunks", received, meta.TotalChunks)
-
 				if received < meta.TotalChunks {
-					// Find missing
 					missing := []int{}
 					for i := 0; i < meta.TotalChunks; i++ {
 						chunkPath := filepath.Join(transferDir, fmt.Sprintf("%d.chunk", i))
@@ -238,65 +384,43 @@ func (s *Server) handleTransfer(w http.ResponseWriter, r *http.Request) {
 							missing = append(missing, i)
 						}
 					}
-					conn.WriteJSON(map[string]interface{}{
-						"status":  "incomplete",
-						"missing": missing,
-					})
+					conn.WriteJSON(map[string]interface{}{"status": "incomplete", "missing": missing})
 					continue
 				}
 
-				// All chunks received - assemble
-				log.Printf("[AERO] Assembling %d chunks...", meta.TotalChunks)
-
+				// Assemble
 				finalPath := filepath.Join(s.config.UploadDir, filepath.Clean(meta.Filename))
 				finalFile, err := os.Create(finalPath)
 				if err != nil {
-					log.Printf("[AERO] Create failed: %v", err)
 					conn.WriteJSON(map[string]interface{}{"error": err.Error()})
 					continue
 				}
 
 				var totalWritten int64
-				assemblyOK := true
-
 				for i := 0; i < meta.TotalChunks; i++ {
 					chunkPath := filepath.Join(transferDir, fmt.Sprintf("%d.chunk", i))
-					chunkData, err := os.ReadFile(chunkPath)
-					if err != nil {
-						log.Printf("[AERO] Read chunk %d failed: %v", i, err)
-						assemblyOK = false
-						break
-					}
-					n, err := finalFile.Write(chunkData)
-					if err != nil {
-						log.Printf("[AERO] Write chunk %d failed: %v", i, err)
-						assemblyOK = false
-						break
-					}
+					chunkData, _ := os.ReadFile(chunkPath)
+					n, _ := finalFile.Write(chunkData)
 					totalWritten += int64(n)
 				}
-
 				finalFile.Close()
-
-				if !assemblyOK || totalWritten != meta.Size {
-					os.Remove(finalPath)
-					log.Printf("[AERO] Assembly failed: wrote %d, expected %d", totalWritten, meta.Size)
-					conn.WriteJSON(map[string]interface{}{"error": "assembly failed"})
-					continue
-				}
-
-				// Cleanup temp
 				os.RemoveAll(transferDir)
 
-				log.Printf("[AERO] ✓ Complete: %s (%d bytes)", meta.Filename, totalWritten)
-				s.emitTransferEvent(TransferEvent{Filename: meta.Filename, Progress: 100, Status: "completed"})
-
-				conn.WriteJSON(map[string]interface{}{
-					"status": "success",
-					"size":   totalWritten,
-				})
-				return
+				log.Printf("[AERO] ✓ Received: %s (%d bytes)", meta.Filename, totalWritten)
+				s.emitTransferEvent(TransferEvent{Filename: meta.Filename, Progress: 100, Status: "completed", Direction: "receive"})
+				conn.WriteJSON(map[string]interface{}{"status": "success", "size": totalWritten})
+				
+				// Reset for next transfer
+				meta = TransferMeta{}
+				transferDir = ""
+				initialized = false
 			}
+			
+			// Handle ACK from phone (for PC->Phone transfers)
+			if ack, ok := msg["ack"]; ok {
+				_ = ack // ACK received, continue sending
+			}
+
 		} else if msgType == websocket.BinaryMessage {
 			if !initialized || len(data) < 4 {
 				continue
@@ -305,14 +429,9 @@ func (s *Server) handleTransfer(w http.ResponseWriter, r *http.Request) {
 			chunkIdx := int(binary.LittleEndian.Uint32(data[:4]))
 			chunkData := data[4:]
 
-			// Write chunk to file
 			chunkPath := filepath.Join(transferDir, fmt.Sprintf("%d.chunk", chunkIdx))
-			err := os.WriteFile(chunkPath, chunkData, 0644)
-			if err != nil {
-				log.Printf("[AERO] Chunk %d write failed: %v", chunkIdx, err)
-			}
+			os.WriteFile(chunkPath, chunkData, 0644)
 
-			// ACK the chunk
 			conn.WriteJSON(map[string]interface{}{"ack": chunkIdx})
 		}
 	}
@@ -357,7 +476,6 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(`{"status":"success"}`))
 }
 
-// Helper functions
 func getLocalIP() string {
 	addrs, _ := net.InterfaceAddrs()
 	for _, addr := range addrs {

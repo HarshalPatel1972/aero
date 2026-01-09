@@ -6,7 +6,11 @@ export function GetLocalIPs():Promise<Array<main.NetworkInterface>>;
 
 export function GetServerStatus():Promise<main.ServerStatus>;
 
+export function IsPhoneConnected():Promise<boolean>;
+
 export function OpenDownloadsFolder():Promise<void>;
+
+export function SendFileToPhone():Promise<void>;
 
 export function StartServer(arg1:string):Promise<void>;
 
