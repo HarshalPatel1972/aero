@@ -573,12 +573,16 @@
                 let lastBytes = 0;
 
                 try {
-                    const formData = new FormData();
-                    formData.append('file', file);
-
                     const xhr = new XMLHttpRequest();
                     activeXHR = xhr; // Store reference for cancel
-                    xhr.open('POST', '/upload', true);
+
+                    // Term-Phase 4: Use /stream endpoint for High-Performance Engine
+                    // This bypasses multipart overhead and uses zero-alloc pool
+                    xhr.open('POST', '/stream', true);
+
+                    // Essential metadata headers for /stream
+                    xhr.setRequestHeader('X-Filename', encodeURIComponent(file.name));
+                    xhr.setRequestHeader('X-Filesize', totalSize.toString());
 
                     xhr.upload.onprogress = (e) => {
                         if (e.lengthComputable) {
@@ -613,7 +617,9 @@
                     };
 
                     xhr.onerror = () => transferComplete(file.name, false);
-                    xhr.send(formData);
+
+                    // Send RAW file body (no FormData/multipart overhead)
+                    xhr.send(file);
 
                 } catch (error) {
                     console.error('Upload failed:', error);

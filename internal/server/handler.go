@@ -267,7 +267,14 @@ func (s *Server) handleStreamUpload(w http.ResponseWriter, r *http.Request) {
 		tracker.EmitError()
 		return
 	}
-	defer writer.Close()
+	
+	// Buffered writer for performance
+	bufWriter := bufio.NewWriterSize(writer, BufferSize)
+	
+	defer func() {
+		bufWriter.Flush()
+		writer.Close()
+	}()
 
 	// Copy using pooled buffer - ZERO ALLOCATION
 	buf := GetBuffer()
@@ -277,7 +284,7 @@ func (s *Server) handleStreamUpload(w http.ResponseWriter, r *http.Request) {
 	for {
 		n, readErr := tracker.Read(*buf)
 		if n > 0 {
-			nw, writeErr := writer.Write((*buf)[:n])
+			nw, writeErr := bufWriter.Write((*buf)[:n])
 			if nw > 0 {
 				written += int64(nw)
 			}
