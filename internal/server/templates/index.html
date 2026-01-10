@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#000000">
     <title>aero</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800;900&display=swap" rel="stylesheet">
     <style>
@@ -185,8 +186,29 @@
     <input type="file" id="fileInput" accept="*/*">
 
     <script>
+        /**
+         * AERO Zero-Overhead Mobile Engine
+         * Term-Phase 7: "Sip, don't Gulp"
+         *
+         * Features:
+         * - Stream slicing with GC pacing (max 10MB chunks)
+         * - Adaptive VFX (60FPS idle, 30FPS during transfer)
+         * - Visibility handler (pause canvas when hidden)
+         * - Memory-safe: explicit dereference after each chunk
+         */
         (function () {
             'use strict';
+
+            // ═══════════════════════════════════════════════════════════
+            // CONSTANTS
+            // ═══════════════════════════════════════════════════════════
+
+            const MAX_CHUNK_SIZE = 10 * 1024 * 1024; // 10MB - safe for mobile
+            const GC_YIELD_MS = 50; // Yield to GC between chunks
+
+            // ═══════════════════════════════════════════════════════════
+            // DOM ELEMENTS
+            // ═══════════════════════════════════════════════════════════
 
             const canvas = document.getElementById('vfx');
             const ctx = canvas.getContext('2d');
@@ -197,8 +219,43 @@
             const statusEl = document.getElementById('status');
             const recentsDiv = document.getElementById('recents');
 
+            // ═══════════════════════════════════════════════════════════
+            // STATE
+            // ═══════════════════════════════════════════════════════════
+
             let W, H, cx, cy;
             const RADIUS = 70;
+            let state = 'idle'; // idle | transfer | burst
+            let progress = 0;
+            let burstR = 0;
+
+            // VFX Performance Mode
+            let vfxMode = 'high'; // high | eco
+            let lastFrameTime = 0;
+            let frameSkip = false;
+            let isPageVisible = true;
+
+            // ═══════════════════════════════════════════════════════════
+            // VISIBILITY HANDLER (Battery Saver)
+            // ═══════════════════════════════════════════════════════════
+
+            document.addEventListener('visibilitychange', () => {
+                isPageVisible = !document.hidden;
+                if (isPageVisible && state !== 'idle') {
+                    // Resume animation when page becomes visible
+                    requestAnimationFrame(render);
+                }
+                console.log('[AERO] Page visibility:', isPageVisible ? 'visible' : 'hidden');
+            });
+
+            // ═══════════════════════════════════════════════════════════
+            // ADAPTIVE VFX ENGINE
+            // ═══════════════════════════════════════════════════════════
+
+            function setPerformanceMode(mode) {
+                vfxMode = mode;
+                console.log('[VFX] Performance mode:', mode);
+            }
 
             function hslToRgb(h, s, l) {
                 s /= 100; l /= 100;
@@ -214,10 +271,6 @@
                 return `rgba(${r}, ${g}, ${b}, ${alpha})`;
             }
 
-            let state = 'idle';
-            let progress = 0;
-            let burstR = 0;
-
             function resize() {
                 W = canvas.width = window.innerWidth;
                 H = canvas.height = window.innerHeight;
@@ -232,33 +285,41 @@
                 const breathe = 1 + Math.sin(t * 2) * 0.08;
                 const r = RADIUS * breathe;
 
-                const glow = ctx.createRadialGradient(cx, cy, r * 0.3, cx, cy, r * 1.8);
-                glow.addColorStop(0, getColor(0, 0.15));
-                glow.addColorStop(0.5, getColor(60, 0.08));
-                glow.addColorStop(1, 'transparent');
-                ctx.beginPath();
-                ctx.arc(cx, cy, r * 1.8, 0, Math.PI * 2);
-                ctx.fillStyle = glow;
-                ctx.fill();
+                // Glow (reduced in eco mode)
+                if (vfxMode === 'high') {
+                    const glow = ctx.createRadialGradient(cx, cy, r * 0.3, cx, cy, r * 1.8);
+                    glow.addColorStop(0, getColor(0, 0.15));
+                    glow.addColorStop(0.5, getColor(60, 0.08));
+                    glow.addColorStop(1, 'transparent');
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, r * 1.8, 0, Math.PI * 2);
+                    ctx.fillStyle = glow;
+                    ctx.fill();
+                }
 
+                // Main ring
                 ctx.beginPath();
                 ctx.arc(cx, cy, r, 0, Math.PI * 2);
                 ctx.strokeStyle = getColor(0, 0.6);
                 ctx.lineWidth = 3;
                 ctx.stroke();
 
-                ctx.beginPath();
-                ctx.arc(cx, cy, r + 15, 0, Math.PI * 2);
-                ctx.strokeStyle = getColor(90, 0.3);
-                ctx.lineWidth = 1;
-                ctx.stroke();
+                // Outer rings (skip in eco mode)
+                if (vfxMode === 'high') {
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, r + 15, 0, Math.PI * 2);
+                    ctx.strokeStyle = getColor(90, 0.3);
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
 
-                ctx.beginPath();
-                ctx.arc(cx, cy, r + 25, 0, Math.PI * 2);
-                ctx.strokeStyle = getColor(180, 0.15);
-                ctx.lineWidth = 1;
-                ctx.stroke();
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, r + 25, 0, Math.PI * 2);
+                    ctx.strokeStyle = getColor(180, 0.15);
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                }
 
+                // Progress arc
                 if (progress > 0 && state === 'transfer') {
                     ctx.beginPath();
                     ctx.arc(cx, cy, r + 8, -Math.PI / 2, -Math.PI / 2 + (Math.PI * 2 * progress / 100));
@@ -272,8 +333,9 @@
             function drawBurst() {
                 burstR += (250 - burstR) * 0.08;
                 const alpha = 1 - burstR / 250;
+                const rings = vfxMode === 'high' ? 4 : 2; // Fewer in eco mode
 
-                for (let i = 0; i < 4; i++) {
+                for (let i = 0; i < rings; i++) {
                     ctx.beginPath();
                     ctx.arc(cx, cy, burstR * (1 - i * 0.2), 0, Math.PI * 2);
                     ctx.strokeStyle = getColor(i * 90, alpha * 0.4);
@@ -284,10 +346,25 @@
                 if (burstR > 240) {
                     state = 'idle';
                     burstR = 0;
+                    setPerformanceMode('high'); // Restore quality
                 }
             }
 
             function render() {
+                // Skip if page hidden (Battery Saver)
+                if (!isPageVisible) return;
+
+                // Frame rate limiting in eco mode (30 FPS)
+                const now = performance.now();
+                if (vfxMode === 'eco') {
+                    if (now - lastFrameTime < 33) { // ~30 FPS
+                        requestAnimationFrame(render);
+                        return;
+                    }
+                }
+                lastFrameTime = now;
+
+                // Clear with trail effect
                 ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
                 ctx.fillRect(0, 0, W, H);
 
@@ -301,6 +378,10 @@
             }
             render();
 
+            // ═══════════════════════════════════════════════════════════
+            // UI HANDLERS
+            // ═══════════════════════════════════════════════════════════
+
             hintEl.addEventListener('click', () => {
                 if (state === 'idle') fileInput.click();
             });
@@ -308,6 +389,10 @@
             document.addEventListener('click', () => {
                 if (state === 'idle') fileInput.click();
             });
+
+            // ═══════════════════════════════════════════════════════════
+            // UTILS
+            // ═══════════════════════════════════════════════════════════
 
             const recents = [];
             let ws = null;
@@ -345,7 +430,12 @@
                 hintEl.classList.remove('hidden');
                 uploadData = null;
                 receiveData = null;
+                setPerformanceMode('high');
             };
+
+            // ═══════════════════════════════════════════════════════════
+            // WEBSOCKET MESSAGE HANDLER
+            // ═══════════════════════════════════════════════════════════
 
             const handleMessage = e => {
                 if (e.data instanceof ArrayBuffer && receiveData) {
@@ -380,6 +470,7 @@
 
                     if (msg.type === 'file_incoming') {
                         state = 'transfer';
+                        setPerformanceMode('eco'); // Reduce VFX during receive
                         receiveData = { name: msg.name, total: msg.chunks, chunks: new Array(msg.chunks) };
                         filenameEl.textContent = msg.name;
                         filenameEl.classList.add('visible');
@@ -413,14 +504,38 @@
             };
             connect();
 
+            // ═══════════════════════════════════════════════════════════
+            // ZERO-OVERHEAD UPLOAD ENGINE
+            // "Sip, don't Gulp" - Stream slicing with GC pacing
+            // ═══════════════════════════════════════════════════════════
+
+            /**
+             * Upload file using surgical stream slicing.
+             * Never loads entire file into memory.
+             * Explicitly dereferences buffers to allow GC.
+             * 
+             * @param {File} file - The file to upload
+             * @returns {Promise<{success: boolean, failedAt?: number}>}
+             */
             async function upload(file) {
-                if (state !== 'idle') return;
+                if (state !== 'idle') return { success: false };
+
                 state = 'transfer';
+                setPerformanceMode('eco'); // Reduce VFX for CPU headroom
 
-                const CHUNK = 1024 * 1024;
-                const total = Math.ceil(file.size / CHUNK);
-                uploadData = { name: file.name, total, acked: 0, sent: 0, t0: Date.now(), ready: false, done: null };
+                const total = Math.ceil(file.size / MAX_CHUNK_SIZE);
+                uploadData = {
+                    name: file.name,
+                    total,
+                    acked: 0,
+                    sent: 0,
+                    t0: Date.now(),
+                    ready: false,
+                    done: null,
+                    failedAt: null
+                };
 
+                // Setup UI
                 filenameEl.textContent = file.name;
                 filenameEl.classList.add('visible');
                 progressNumber.textContent = '0';
@@ -431,31 +546,82 @@
                 progress = 0;
 
                 try {
+                    // Signal file start
                     ws.send(JSON.stringify({ name: file.name, size: file.size, chunks: total }));
-                    await new Promise((r, j) => {
-                        const c = () => uploadData.ready ? r() : setTimeout(c, 10);
-                        c(); setTimeout(() => j(new Error('timeout')), 10000);
+
+                    // Wait for server ready
+                    await new Promise((resolve, reject) => {
+                        const check = () => uploadData.ready ? resolve() : setTimeout(check, 10);
+                        check();
+                        setTimeout(() => reject(new Error('timeout')), 10000);
                     });
 
                     statusEl.textContent = 'sending';
+
+                    // ═══════════════════════════════════════════════════════
+                    // STREAM SLICING LOOP
+                    // Key: Only one chunk in memory at a time
+                    // ═══════════════════════════════════════════════════════
+
                     for (let i = 0; i < total; i++) {
-                        const d = await file.slice(i * CHUNK, Math.min((i + 1) * CHUNK, file.size)).arrayBuffer();
-                        const h = new ArrayBuffer(4);
-                        new DataView(h).setUint32(0, i, true);
-                        const c = new Uint8Array(4 + d.byteLength);
-                        c.set(new Uint8Array(h), 0);
-                        c.set(new Uint8Array(d), 4);
-                        ws.send(c);
-                        uploadData.sent += d.byteLength;
+                        const start = i * MAX_CHUNK_SIZE;
+                        const end = Math.min((i + 1) * MAX_CHUNK_SIZE, file.size);
+
+                        // 1. Create a Blob "pointer" (no memory allocation)
+                        const slice = file.slice(start, end);
+
+                        // 2. Read only this slice into memory
+                        let buffer = await slice.arrayBuffer();
+
+                        // 3. Prepare header (4-byte chunk index)
+                        const header = new ArrayBuffer(4);
+                        new DataView(header).setUint32(0, i, true);
+
+                        // 4. Combine header + data
+                        const packet = new Uint8Array(4 + buffer.byteLength);
+                        packet.set(new Uint8Array(header), 0);
+                        packet.set(new Uint8Array(buffer), 4);
+
+                        // 5. Send packet
+                        ws.send(packet);
+                        uploadData.sent += buffer.byteLength;
+
+                        // 6. CRITICAL: Dereference buffer immediately
+                        // This allows GC to reclaim memory before next chunk
+                        buffer = null;
+
+                        // 7. Yield to browser (GC + UI updates)
+                        if (i % 5 === 0) {
+                            await new Promise(r => setTimeout(r, GC_YIELD_MS));
+                        }
                     }
 
+                    // Wait for all ACKs
                     statusEl.textContent = 'verifying';
-                    await new Promise(r => { uploadData.done = r; if (uploadData.acked >= total) r(); setTimeout(r, 60000); });
+                    await new Promise(resolve => {
+                        uploadData.done = resolve;
+                        if (uploadData.acked >= total) resolve();
+                        setTimeout(resolve, 60000);
+                    });
+
+                    // Signal completion
                     ws.send(JSON.stringify({ done: true }));
+
+                    return { success: true };
+
                 } catch (e) {
+                    console.error('[UPLOAD] Failed:', e);
                     statusEl.textContent = 'failed';
+                    uploadData.failedAt = uploadData.sent;
                     state = 'idle';
                     setTimeout(reset, 2000);
+
+                    // Return failure info for potential resume
+                    return {
+                        success: false,
+                        failedAt: uploadData.sent,
+                        error: e.message
+                    };
                 }
             }
 
@@ -463,6 +629,9 @@
                 if (fileInput.files[0]) upload(fileInput.files[0]);
                 fileInput.value = '';
             };
+
+            // Expose for debugging
+            window.AERO = { upload, setPerformanceMode, getState: () => ({ state, progress, vfxMode }) };
         })();
     </script>
 </body>
