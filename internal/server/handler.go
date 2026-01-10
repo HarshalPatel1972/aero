@@ -256,7 +256,7 @@ func (s *Server) handleStreamUpload(w http.ResponseWriter, r *http.Request) {
 	})
 
 	// Wrap body with bandwidth tracker
-	tracker := NewTransferTracker(s.ctx, r.Body, totalSize, filename, "receive")
+	tracker := NewTransferTracker(s.wailsCtx, r.Body, totalSize, filename, "receive")
 	tracker.EmitStart()
 
 	// Create destination file

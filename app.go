@@ -152,6 +152,7 @@ func (a *App) StartServer(ip string) error {
 
 	// Start server in goroutine
 	go func() {
+		a.server.SetWailsContext(a.ctx) // Ensure server handles Wails events
 		if err := a.server.StartWithContext(ctx, ip); err != nil {
 			wailsruntime.EventsEmit(a.ctx, "server:error", map[string]string{
 				"error": err.Error(),

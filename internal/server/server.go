@@ -71,7 +71,7 @@ type Server struct {
 	sessionKeyBase64 string
 	onTransfer       TransferCallback
 	tempDir          string
-	ctx              context.Context // Wails context for event emission
+	wailsCtx         context.Context // Wails context for event emission
 
 	// Term-Phase 5: Multi-peer hub
 	hub *Hub
@@ -148,8 +148,12 @@ func (s *Server) Start() error {
 	return s.httpServer.ListenAndServe()
 }
 
+func (s *Server) SetWailsContext(ctx context.Context) {
+	s.wailsCtx = ctx
+}
+
 func (s *Server) StartWithContext(ctx context.Context, ip string) error {
-	s.ctx = ctx // Store for handlers to emit events
+	// ctx here is for server lifecycle (cancellation), NOT Wails events
 	addr := fmt.Sprintf("%s:%s", ip, s.config.Port)
 	s.httpServer.Addr = addr
 	log.Printf("[AERO] Starting on %s", addr)
