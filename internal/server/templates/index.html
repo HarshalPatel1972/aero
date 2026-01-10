@@ -205,6 +205,83 @@
 
             const MAX_CHUNK_SIZE = 10 * 1024 * 1024; // 10MB - safe for mobile
             const GC_YIELD_MS = 50; // Yield to GC between chunks
+            const IV_SIZE = 16; // AES-CTR IV size (128-bit)
+
+            // ═══════════════════════════════════════════════════════════
+            // CRYPTO ENGINE ("The Optical Vault")
+            // Term-Phase 8: AES-256-CTR encryption via WebCrypto
+            // ═══════════════════════════════════════════════════════════
+
+            let cryptoKey = null; // Imported AES-256 key
+            let encryptionEnabled = false;
+            let sessionIV = null; // Session IV for all chunks
+
+            /**
+             * Extract session key from URL hash fragment.
+             * Hash fragments are NEVER sent in HTTP headers - invisible to sniffers.
+             */
+            function extractKeyFromHash() {
+                const hash = window.location.hash;
+                if (!hash || !hash.includes('key=')) {
+                    console.log('[CRYPTO] No key in URL, plaintext mode');
+                    return null;
+                }
+                const keyMatch = hash.match(/key=([A-Za-z0-9_-]+)/);
+                return keyMatch ? keyMatch[1] : null;
+            }
+
+            /**
+             * Import session key for WebCrypto AES-256-CTR.
+             */
+            async function importKey(base64Key) {
+                try {
+                    const keyStr = base64Key.replace(/-/g, '+').replace(/_/g, '/');
+                    const keyBytes = Uint8Array.from(atob(keyStr), c => c.charCodeAt(0));
+                    if (keyBytes.length !== 32) throw new Error('Invalid key size');
+
+                    cryptoKey = await crypto.subtle.importKey(
+                        'raw', keyBytes, { name: 'AES-CTR' }, false, ['encrypt']
+                    );
+                    sessionIV = crypto.getRandomValues(new Uint8Array(IV_SIZE));
+                    encryptionEnabled = true;
+                    console.log('[CRYPTO] ✅ AES-256-CTR enabled');
+                    return true;
+                } catch (e) {
+                    console.error('[CRYPTO] ❌ Key import failed:', e);
+                    return false;
+                }
+            }
+
+            /**
+             * Encrypt chunk with counter offset for streaming.
+             */
+            async function encryptChunk(buffer, chunkIndex) {
+                if (!encryptionEnabled) return buffer;
+
+                const counter = new Uint8Array(sessionIV);
+                // Advance counter by chunk index
+                const view = new DataView(counter.buffer);
+                const offset = chunkIndex * Math.ceil(MAX_CHUNK_SIZE / 16);
+                view.setBigUint64(8, BigInt(offset), false);
+
+                return await crypto.subtle.encrypt(
+                    { name: 'AES-CTR', counter, length: 64 },
+                    cryptoKey, buffer
+                );
+            }
+
+            /**
+             * Get IV to prepend to first chunk.
+             */
+            function getSessionIV() {
+                return sessionIV ? new Uint8Array(sessionIV) : null;
+            }
+
+            // Initialize crypto on page load
+            (async () => {
+                const key = extractKeyFromHash();
+                if (key) await importKey(key);
+            })();
 
             // ═══════════════════════════════════════════════════════════
             // DOM ELEMENTS
