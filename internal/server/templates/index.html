@@ -362,15 +362,14 @@
         .stats-banner {
             width: 100%;
             max-width: 320px;
-            padding: 12px 16px;
-            background: linear-gradient(135deg, rgba(0, 229, 255, 0.1), rgba(0, 229, 255, 0.05));
-            border: 1px solid var(--cyan);
+            padding: 10px 16px;
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid #10b981;
             border-radius: 12px;
             margin-bottom: 20px;
             opacity: 0;
             transform: translateY(-10px);
             transition: all 0.3s ease;
-            pointer-events: none;
         }
 
         .stats-banner.show {
@@ -378,20 +377,12 @@
             transform: translateY(0);
         }
 
-        .stats-banner-title {
-            font-size: 10px;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            color: var(--text-muted);
-            margin-bottom: 6px;
-        }
-
         .stats-banner-content {
-            font-size: 14px;
+            font-size: 15px;
             font-weight: 600;
             font-family: 'JetBrains Mono', monospace;
-            color: var(--cyan);
-            line-height: 1.4;
+            color: #10b981;
+            text-align: center;
         }
 
         /* Bottom Bar */
@@ -427,9 +418,8 @@
 
         <!-- Main Content -->
         <div class="main-content">
-            <!-- Stats Banner (shows for 5s after transfer) -->
+            <!-- Stats Banner (permanent display) -->
             <div class="stats-banner" id="statsBanner">
-                <div class="stats-banner-title">Last Transfer</div>
                 <div class="stats-banner-content" id="statsContent">--</div>
             </div>
 
@@ -836,22 +826,17 @@
             function transferComplete(name, success, totalBytes, totalTime, avgSpeed) {
                 activeXHR = null; // Clear reference
 
-                // Show stats in dedicated banner for 5 seconds
+                // Show stats in permanent banner
                 if (success && totalBytes && totalTime) {
-                    const sizeMB = (totalBytes / (1024 * 1024)).toFixed(2);
-                    const speedMBps = (avgSpeed / (1024 * 1024)).toFixed(2);
-                    const timeSec = totalTime.toFixed(2);
+                    const speedMBps = (avgSpeed / (1024 * 1024)).toFixed(1);
+                    const timeSec = totalTime.toFixed(1);
 
-                    // Update banner
-                    statsContent.textContent = `${name}\n${sizeMB} MB in ${timeSec}s @ ${speedMBps} MB/s`;
+                    // Update banner (permanent)
+                    statsContent.textContent = `${speedMBps} MB/s | ${timeSec}s`;
                     statsBanner.classList.add('show');
+                    // No timeout - stays visible
 
-                    // Hide after 5 seconds
-                    setTimeout(() => {
-                        statsBanner.classList.remove('show');
-                    }, 5000);
-
-                    console.log(`[STATS] 📊 ${name}: ${sizeMB} MB | ${timeSec}s | ${speedMBps} MB/s`);
+                    console.log(`[STATS] 📊 ${name}: ${speedMBps} MB/s | ${timeSec}s`);
                 }
 
                 // Update transfer panel (which will hide after 2s)
