@@ -7,7 +7,7 @@
  */
 
 import { memo } from 'react';
-import { ArrowUpRight, ArrowDownLeft, Zap } from 'lucide-react';
+import { ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 import { TelemetryGraph } from './TelemetryGraph';
 import { TransferState, formatBytes, formatSpeed, formatEta } from '../../hooks/useTransfer';
 
@@ -98,35 +98,12 @@ const TelemetryStat = memo(function TelemetryStat({
  */
 export const ActivePanel = memo(function ActivePanel({
   transfer,
-  onTest,
 }: ActivePanelProps) {
   const { active, filename, totalBytes, transferredBytes, speed, speedHistory, eta, direction } = transfer;
 
-  // If no active transfer, show test button
+  // If no active transfer, hide the panel completely
   if (!active && transfer.progress < 100) {
-    return (
-      <div className="flex flex-col items-center justify-center gap-4 py-8
-        bg-void-surface/30 backdrop-blur-sm rounded-xl border border-void-border/50">
-        <p className="text-sm text-white/40">No active transfer</p>
-        {onTest && (
-          <button
-            onClick={onTest}
-            className="
-              flex items-center gap-2 px-4 py-2
-              bg-aero-cyan/10 text-aero-cyan
-              rounded-lg border border-aero-cyan/30
-              hover:bg-aero-cyan/20 hover:border-aero-cyan/50
-              transition-all duration-200
-              active:scale-95 transform-gpu
-              text-sm font-medium
-            "
-          >
-            <Zap className="w-4 h-4" />
-            Test Transfer
-          </button>
-        )}
-      </div>
-    );
+    return null;
   }
 
   // Completed state
@@ -147,53 +124,53 @@ export const ActivePanel = memo(function ActivePanel({
   }
 
   return (
-    <div className="flex flex-col gap-4 p-4
+    <div className="flex flex-col gap-2 p-3
       bg-void-surface/40 backdrop-blur-glass
       rounded-xl border border-void-border/50
       animate-scale-in">
       
       {/* Header: Filename + Direction */}
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <div className={`
-            w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0
+            w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0
             ${direction === 'send' ? 'bg-blue-500/20' : 'bg-aero-cyan/20'}
           `}>
             {direction === 'send' 
-              ? <ArrowUpRight className="w-4 h-4 text-blue-400" />
-              : <ArrowDownLeft className="w-4 h-4 text-aero-cyan" />
+              ? <ArrowUpRight className="w-3.5 h-3.5 text-blue-400" />
+              : <ArrowDownLeft className="w-3.5 h-3.5 text-aero-cyan" />
             }
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-medium text-white truncate">{filename}</p>
-            <p className="text-xs text-white/40">
+            <p className="text-xs font-medium text-white truncate">{filename}</p>
+            <p className="text-[10px] text-white/40">
               {direction === 'send' ? 'Sending' : 'Receiving'}
             </p>
           </div>
         </div>
         
         {/* Live indicator */}
-        <div className="flex items-center gap-1.5">
-          <div className="w-2 h-2 rounded-full bg-aero-cyan animate-pulse" />
-          <span className="text-xs font-medium text-aero-cyan uppercase tracking-wider">Live</span>
+        <div className="flex items-center gap-1">
+          <div className="w-1.5 h-1.5 rounded-full bg-aero-cyan animate-pulse" />
+          <span className="text-[10px] font-medium text-aero-cyan uppercase tracking-wider">Live</span>
         </div>
       </div>
 
       {/* Quantum Progress Bar */}
       <QuantumProgressBar progress={transfer.progress} />
 
-      {/* Telemetry Graph */}
+      {/* Telemetry Graph - compact */}
       <div className="relative">
         <TelemetryGraph 
           data={speedHistory} 
           width={280} 
-          height={48}
+          height={32}
           className="w-full"
         />
       </div>
 
-      {/* Telemetry Grid */}
-      <div className="grid grid-cols-3 gap-4">
+      {/* Telemetry Grid - single row */}
+      <div className="grid grid-cols-3 gap-2">
         <TelemetryStat 
           label="Speed" 
           value={formatSpeed(speed)} 

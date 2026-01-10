@@ -4,10 +4,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#000000">
-    <title>aero</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800;900&display=swap" rel="stylesheet">
+    <meta name="theme-color" content="#050505">
+    <title>Aero</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --bg-void: #050505;
+            --bg-surface: rgba(26, 26, 26, 0.8);
+            --border: rgba(255, 255, 255, 0.1);
+            --cyan: #00E5FF;
+            --cyan-glow: rgba(0, 229, 255, 0.3);
+            --text: rgba(255, 255, 255, 0.9);
+            --text-muted: rgba(255, 255, 255, 0.5);
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -19,150 +29,326 @@
             width: 100%;
             height: 100%;
             overflow: hidden;
-            background: #000;
-            font-family: 'Inter', sans-serif;
+            background: var(--bg-void);
+            font-family: 'Inter', -apple-system, sans-serif;
             -webkit-font-smoothing: antialiased;
-            touch-action: none;
-            user-select: none;
+            color: var(--text);
         }
 
-        #vfx {
-            position: fixed;
-            inset: 0;
-            z-index: 0;
-        }
-
-        #ui-layer {
-            position: fixed;
-            inset: 0;
-            z-index: 10;
+        .app {
             display: flex;
             flex-direction: column;
+            height: 100%;
+            padding: 16px;
+            padding-top: env(safe-area-inset-top, 16px);
+            padding-bottom: env(safe-area-inset-bottom, 16px);
+        }
+
+        /* Title Bar */
+        .title-bar {
+            display: flex;
             align-items: center;
-            padding: 48px 24px;
-            pointer-events: none;
+            justify-content: space-between;
+            padding: 12px 16px;
+            background: var(--bg-surface);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            margin-bottom: 16px;
         }
 
         .logo {
-            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .logo-icon {
+            width: 24px;
+            height: 24px;
+            background: linear-gradient(135deg, var(--cyan), #00B8D4);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             font-weight: 700;
-            color: rgba(255, 255, 255, 0.4);
-            letter-spacing: -0.02em;
-            margin-bottom: 24px;
+            font-size: 14px;
+            color: #000;
         }
 
-        .filename {
-            font-size: 1.3rem;
-            font-weight: 800;
-            color: #fff;
-            text-align: center;
-            max-width: 80%;
-            word-break: break-word;
-            opacity: 0;
-            transition: opacity 0.5s;
-        }
-
-        .filename.visible {
-            opacity: 1;
-        }
-
-        .progress-number {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 5rem;
-            font-weight: 900;
-            color: rgba(255, 255, 255, 0.08);
-            pointer-events: none;
-            opacity: 0;
-            transition: opacity 0.5s;
-        }
-
-        .progress-number.visible {
-            opacity: 1;
-        }
-
-        .hint {
-            position: absolute;
-            bottom: 140px;
-            font-size: 0.75rem;
-            font-weight: 700;
-            color: rgba(255, 255, 255, 0.25);
-            text-transform: uppercase;
-            letter-spacing: 0.2em;
-            pointer-events: all;
-            cursor: pointer;
-        }
-
-        .hint.hidden {
-            opacity: 0;
-        }
-
-        .status {
-            position: absolute;
-            bottom: 100px;
-            font-size: 0.7rem;
+        .logo-text {
             font-weight: 600;
-            color: rgba(255, 255, 255, 0.4);
+            font-size: 15px;
+        }
+
+        .connection-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            background: rgba(0, 229, 255, 0.1);
+            border: 1px solid rgba(0, 229, 255, 0.3);
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--cyan);
+        }
+
+        .connection-dot {
+            width: 6px;
+            height: 6px;
+            background: var(--cyan);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        .main-title {
+            font-size: 18px;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        /* Action Button */
+        .action-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            max-width: 280px;
+            padding: 16px 24px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 16px;
+            color: var(--text);
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .action-btn:hover,
+        .action-btn:active {
+            background: rgba(0, 229, 255, 0.1);
+            border-color: var(--cyan);
+            color: var(--cyan);
+        }
+
+        .action-btn svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* Transfer Panel */
+        .transfer-panel {
+            width: 100%;
+            max-width: 320px;
+            padding: 16px;
+            background: var(--bg-surface);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            display: none;
+        }
+
+        .transfer-panel.active {
+            display: block;
+        }
+
+        .transfer-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .transfer-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .transfer-icon {
+            width: 32px;
+            height: 32px;
+            background: rgba(0, 229, 255, 0.2);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .transfer-icon svg {
+            width: 16px;
+            height: 16px;
+            color: var(--cyan);
+        }
+
+        .transfer-name {
+            font-size: 13px;
+            font-weight: 600;
+            max-width: 150px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .transfer-status {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .live-badge {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--cyan);
+            text-transform: uppercase;
+        }
+
+        .live-badge::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            background: var(--cyan);
+            border-radius: 50%;
+            animation: pulse 1s infinite;
+        }
+
+        /* Progress Bar */
+        .progress-bar {
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 12px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--cyan), #00B8D4);
+            border-radius: 3px;
+            transition: width 0.3s;
+            box-shadow: 0 0 10px var(--cyan-glow);
+        }
+
+        /* Stats */
+        .stats-row {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 9px;
             text-transform: uppercase;
             letter-spacing: 0.1em;
-            opacity: 0;
-            transition: opacity 0.3s;
+            color: var(--text-muted);
+            margin-bottom: 2px;
         }
 
-        .status.visible {
-            opacity: 1;
+        .stat-value {
+            font-size: 13px;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
         }
 
+        .stat-value.highlight {
+            color: var(--cyan);
+        }
+
+        /* Recent Files */
         .recents {
-            position: absolute;
-            bottom: 24px;
-            width: calc(100% - 48px);
-            max-width: 300px;
+            width: 100%;
+            max-width: 320px;
         }
 
-        .recent-header {
-            font-size: 0.55rem;
-            color: rgba(255, 255, 255, 0.2);
+        .recents-header {
+            font-size: 11px;
             text-transform: uppercase;
-            letter-spacing: 0.15em;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            margin-bottom: 10px;
             text-align: center;
-            margin-bottom: 8px;
         }
 
         .recent-item {
             display: flex;
             align-items: center;
             gap: 10px;
-            padding: 10px 14px;
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.06);
+            padding: 10px 12px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
             border-radius: 10px;
             margin-bottom: 6px;
         }
 
         .recent-icon {
-            font-size: 0.9rem;
+            width: 28px;
+            height: 28px;
+            background: rgba(0, 229, 255, 0.1);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
         }
 
         .recent-name {
             flex: 1;
-            font-size: 0.7rem;
-            font-weight: 600;
-            color: rgba(255, 255, 255, 0.7);
+            font-size: 12px;
+            font-weight: 500;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
 
         .recent-badge {
-            font-size: 0.5rem;
-            padding: 3px 8px;
-            border-radius: 6px;
+            font-size: 9px;
+            padding: 3px 6px;
+            border-radius: 4px;
             text-transform: uppercase;
-            letter-spacing: 0.08em;
-            font-weight: 700;
+            font-weight: 600;
+            background: rgba(0, 229, 255, 0.1);
+            color: var(--cyan);
+        }
+
+        /* Bottom Bar */
+        .bottom-bar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px;
+            color: var(--text-muted);
+            font-size: 11px;
         }
 
         input[type="file"] {
@@ -172,79 +358,129 @@
 </head>
 
 <body>
-    <canvas id="vfx"></canvas>
+    <div class="app">
+        <!-- Title Bar -->
+        <div class="title-bar">
+            <div class="logo">
+                <div class="logo-icon">A</div>
+                <span class="logo-text">Aero</span>
+            </div>
+            <div class="connection-badge">
+                <div class="connection-dot"></div>
+                Connected
+            </div>
+        </div>
 
-    <div id="ui-layer">
-        <div class="logo">aero</div>
-        <div class="filename" id="filename"></div>
-        <div class="progress-number" id="progressNumber">0</div>
-        <div class="hint" id="hint">tap to send</div>
-        <div class="status" id="status"></div>
-        <div class="recents" id="recents"></div>
+        <!-- Main Content -->
+        <div class="main-content">
+            <h1 class="main-title" id="mainTitle">Send Files to PC</h1>
+
+            <!-- Action Button -->
+            <button class="action-btn" id="selectBtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="17 8 12 3 7 8" />
+                    <line x1="12" y1="3" x2="12" y2="15" />
+                </svg>
+                Select Files
+            </button>
+
+            <!-- Transfer Panel -->
+            <div class="transfer-panel" id="transferPanel">
+                <div class="transfer-header">
+                    <div class="transfer-info">
+                        <div class="transfer-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                <polyline points="17 8 12 3 7 8" />
+                                <line x1="12" y1="3" x2="12" y2="15" />
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="transfer-name" id="fileName">file.zip</div>
+                            <div class="transfer-status" id="transferStatus">Sending...</div>
+                        </div>
+                    </div>
+                    <div class="live-badge">Live</div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                </div>
+                <div class="stats-row">
+                    <div class="stat">
+                        <div class="stat-label">Speed</div>
+                        <div class="stat-value highlight" id="speedStat">0 MB/s</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Progress</div>
+                        <div class="stat-value" id="progressStat">0%</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">ETA</div>
+                        <div class="stat-value" id="etaStat">--</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Files -->
+            <div class="recents" id="recents"></div>
+        </div>
+
+        <!-- Bottom Bar -->
+        <div class="bottom-bar">
+            <span>Connected to PC</span>
+        </div>
     </div>
 
-    <input type="file" id="fileInput" accept="*/*">
+    <input type="file" id="fileInput" multiple>
 
     <script>
         /**
-         * AERO Zero-Overhead Mobile Engine
-         * Term-Phase 7: "Sip, don't Gulp"
-         *
-         * Features:
-         * - Stream slicing with GC pacing (max 10MB chunks)
-         * - Adaptive VFX (60FPS idle, 30FPS during transfer)
-         * - Visibility handler (pause canvas when hidden)
-         * - Memory-safe: explicit dereference after each chunk
+         * AERO Mobile Client
+         * Matching desktop aesthetic with glassmorphism design
          */
         (function () {
             'use strict';
 
-            // ═══════════════════════════════════════════════════════════
-            // CONSTANTS
-            // ═══════════════════════════════════════════════════════════
+            const MAX_CHUNK_SIZE = 10 * 1024 * 1024;
+            const IV_SIZE = 16;
 
-            const MAX_CHUNK_SIZE = 10 * 1024 * 1024; // 10MB - safe for mobile
-            const GC_YIELD_MS = 50; // Yield to GC between chunks
-            const IV_SIZE = 16; // AES-CTR IV size (128-bit)
+            // DOM
+            const selectBtn = document.getElementById('selectBtn');
+            const fileInput = document.getElementById('fileInput');
+            const transferPanel = document.getElementById('transferPanel');
+            const fileName = document.getElementById('fileName');
+            const transferStatus = document.getElementById('transferStatus');
+            const progressFill = document.getElementById('progressFill');
+            const speedStat = document.getElementById('speedStat');
+            const progressStat = document.getElementById('progressStat');
+            const etaStat = document.getElementById('etaStat');
+            const recentsDiv = document.getElementById('recents');
+            const mainTitle = document.getElementById('mainTitle');
 
-            // ═══════════════════════════════════════════════════════════
-            // CRYPTO ENGINE ("The Optical Vault")
-            // Term-Phase 8: AES-256-CTR encryption via WebCrypto
-            // ═══════════════════════════════════════════════════════════
-
-            let cryptoKey = null; // Imported AES-256 key
+            // State
+            let recentFiles = [];
+            let cryptoKey = null;
             let encryptionEnabled = false;
-            let sessionIV = null; // Session IV for all chunks
+            let sessionIV = null;
 
-            /**
-             * Extract session key from URL hash fragment.
-             * Hash fragments are NEVER sent in HTTP headers - invisible to sniffers.
-             */
+            // Crypto functions
             function extractKeyFromHash() {
                 const hash = window.location.hash;
-                if (!hash || !hash.includes('key=')) {
-                    console.log('[CRYPTO] No key in URL, plaintext mode');
-                    return null;
-                }
+                if (!hash || !hash.includes('key=')) return null;
                 const keyMatch = hash.match(/key=([A-Za-z0-9_-]+)/);
                 return keyMatch ? keyMatch[1] : null;
             }
 
-            /**
-             * Import session key for WebCrypto AES-256-CTR.
-             */
             async function importKey(base64Key) {
                 try {
                     const keyStr = base64Key.replace(/-/g, '+').replace(/_/g, '/');
                     const keyBytes = Uint8Array.from(atob(keyStr), c => c.charCodeAt(0));
                     if (keyBytes.length !== 32) throw new Error('Invalid key size');
-
-                    cryptoKey = await crypto.subtle.importKey(
-                        'raw', keyBytes, { name: 'AES-CTR' }, false, ['encrypt']
-                    );
+                    cryptoKey = await crypto.subtle.importKey('raw', keyBytes, { name: 'AES-CTR' }, false, ['encrypt']);
                     sessionIV = crypto.getRandomValues(new Uint8Array(IV_SIZE));
                     encryptionEnabled = true;
-                    console.log('[CRYPTO] ✅ AES-256-CTR enabled');
+                    console.log('[CRYPTO] ✅ Encryption enabled');
                     return true;
                 } catch (e) {
                     console.error('[CRYPTO] ❌ Key import failed:', e);
@@ -252,589 +488,159 @@
                 }
             }
 
-            /**
-             * Encrypt chunk with counter offset for streaming.
-             */
             async function encryptChunk(buffer, chunkIndex) {
                 if (!encryptionEnabled) return buffer;
-
                 const counter = new Uint8Array(sessionIV);
-                // Advance counter by chunk index
                 const view = new DataView(counter.buffer);
                 const offset = chunkIndex * Math.ceil(MAX_CHUNK_SIZE / 16);
                 view.setBigUint64(8, BigInt(offset), false);
-
-                return await crypto.subtle.encrypt(
-                    { name: 'AES-CTR', counter, length: 64 },
-                    cryptoKey, buffer
-                );
+                return await crypto.subtle.encrypt({ name: 'AES-CTR', counter, length: 64 }, cryptoKey, buffer);
             }
 
-            /**
-             * Get IV to prepend to first chunk.
-             */
-            function getSessionIV() {
-                return sessionIV ? new Uint8Array(sessionIV) : null;
-            }
-
-            // Initialize crypto on page load
+            // Init crypto
             (async () => {
                 const key = extractKeyFromHash();
                 if (key) await importKey(key);
             })();
 
-            // ═══════════════════════════════════════════════════════════
-            // HAPTIC FEEDBACK SYSTEM
-            // Term-Phase 9: "Glass & Air" - Sharp ticks, not buzzy
-            // ═══════════════════════════════════════════════════════════
+            // File selection
+            selectBtn.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', async (e) => {
+                const files = e.target.files;
+                if (!files || files.length === 0) return;
 
-            const haptics = {
-                /** Tiny tick - like a watch gear (hover/orbit touch) */
-                tick: () => navigator.vibrate?.(5),
+                for (const file of files) {
+                    await uploadFile(file);
+                }
+                fileInput.value = '';
+            });
 
-                /** Start transfer */
-                start: () => navigator.vibrate?.(20),
+            // Upload file
+            async function uploadFile(file) {
+                mainTitle.textContent = 'Sending...';
+                fileName.textContent = file.name;
+                transferStatus.textContent = 'Uploading...';
+                transferPanel.classList.add('active');
+                selectBtn.style.display = 'none';
 
-                /** Success - double tap */
-                success: () => navigator.vibrate?.([50, 30, 50]),
+                const totalSize = file.size;
+                let uploaded = 0;
+                let startTime = Date.now();
+                let lastTime = startTime;
+                let lastBytes = 0;
 
-                /** Error - long buzz */
-                error: () => navigator.vibrate?.([300]),
-
-                /** Peer connected */
-                link: () => navigator.vibrate?.([10, 20, 10]),
-            };
-
-            // ═══════════════════════════════════════════════════════════
-            // AUDIO ENGINE (Web Audio Synthesis)
-            // No external files - sounds generated mathematically
-            // ═══════════════════════════════════════════════════════════
-
-            let audioCtx = null;
-            let audioGain = null;
-            let audioMuted = false;
-
-            function initAudio() {
-                if (audioCtx) return;
                 try {
-                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                    audioGain = audioCtx.createGain();
-                    audioGain.gain.value = 0.3; // -10dB (subtle)
-                    audioGain.connect(audioCtx.destination);
-                    console.log('[AUDIO] ✅ Sound engine ready');
-                } catch (e) {
-                    console.warn('[AUDIO] ⚠️ Web Audio unavailable');
+                    const formData = new FormData();
+                    formData.append('file', file);
+
+                    const xhr = new XMLHttpRequest();
+                    xhr.open('POST', '/upload', true);
+
+                    xhr.upload.onprogress = (e) => {
+                        if (e.lengthComputable) {
+                            uploaded = e.loaded;
+                            const progress = Math.round((uploaded / totalSize) * 100);
+                            progressFill.style.width = progress + '%';
+                            progressStat.textContent = progress + '%';
+
+                            const now = Date.now();
+                            const timeDiff = (now - lastTime) / 1000;
+                            if (timeDiff >= 0.5) {
+                                const bytesDiff = uploaded - lastBytes;
+                                const speed = bytesDiff / timeDiff;
+                                speedStat.textContent = formatSpeed(speed);
+
+                                const remaining = totalSize - uploaded;
+                                const eta = speed > 0 ? remaining / speed : 0;
+                                etaStat.textContent = formatEta(eta);
+
+                                lastTime = now;
+                                lastBytes = uploaded;
+                            }
+                        }
+                    };
+
+                    xhr.onload = () => {
+                        if (xhr.status === 200) {
+                            transferComplete(file.name, true);
+                        } else {
+                            transferComplete(file.name, false);
+                        }
+                    };
+
+                    xhr.onerror = () => transferComplete(file.name, false);
+                    xhr.send(formData);
+
+                } catch (error) {
+                    console.error('Upload failed:', error);
+                    transferComplete(file.name, false);
                 }
             }
 
-            const sounds = {
-                /** Pop - peer connects */
-                link: () => {
-                    if (!audioCtx || audioMuted || document.hidden) return;
-                    const osc = audioCtx.createOscillator();
-                    const gain = audioCtx.createGain();
-                    const now = audioCtx.currentTime;
-                    osc.type = 'sine';
-                    osc.frequency.setValueAtTime(880, now);
-                    osc.frequency.exponentialRampToValueAtTime(1760, now + 0.05);
-                    gain.gain.setValueAtTime(0, now);
-                    gain.gain.linearRampToValueAtTime(0.4, now + 0.01);
-                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
-                    osc.connect(gain).connect(audioGain);
-                    osc.start(now);
-                    osc.stop(now + 0.15);
-                },
+            function transferComplete(name, success) {
+                mainTitle.textContent = success ? 'Transfer Complete!' : 'Transfer Failed';
+                transferStatus.textContent = success ? 'Sent successfully' : 'Error occurred';
+                progressFill.style.width = '100%';
+                progressStat.textContent = '100%';
 
-                /** Whoosh - transfer starts */
-                ignite: () => {
-                    if (!audioCtx || audioMuted || document.hidden) return;
-                    const bufLen = audioCtx.sampleRate * 0.3;
-                    const buf = audioCtx.createBuffer(1, bufLen, audioCtx.sampleRate);
-                    const data = buf.getChannelData(0);
-                    for (let i = 0; i < bufLen; i++) data[i] = Math.random() * 2 - 1;
-                    const noise = audioCtx.createBufferSource();
-                    noise.buffer = buf;
-                    const filter = audioCtx.createBiquadFilter();
-                    filter.type = 'bandpass';
-                    filter.Q.value = 2;
-                    const gain = audioCtx.createGain();
-                    const now = audioCtx.currentTime;
-                    filter.frequency.setValueAtTime(200, now);
-                    filter.frequency.exponentialRampToValueAtTime(4000, now + 0.25);
-                    gain.gain.setValueAtTime(0, now);
-                    gain.gain.linearRampToValueAtTime(0.3, now + 0.05);
-                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
-                    noise.connect(filter).connect(gain).connect(audioGain);
-                    noise.start(now);
-                    noise.stop(now + 0.3);
-                },
-
-                /** Glassy chord - success */
-                land: () => {
-                    if (!audioCtx || audioMuted || document.hidden) return;
-                    const now = audioCtx.currentTime;
-                    [523.25, 659.25, 783.99, 987.77].forEach((freq, i) => {
-                        const osc = audioCtx.createOscillator();
-                        const gain = audioCtx.createGain();
-                        osc.type = i % 2 === 0 ? 'sine' : 'triangle';
-                        osc.frequency.value = freq;
-                        const d = i * 0.02;
-                        gain.gain.setValueAtTime(0, now + d);
-                        gain.gain.linearRampToValueAtTime(0.15, now + d + 0.02);
-                        gain.gain.exponentialRampToValueAtTime(0.001, now + d + 0.5);
-                        osc.connect(gain).connect(audioGain);
-                        osc.start(now + d);
-                        osc.stop(now + d + 0.5);
-                    });
-                },
-
-                /** Low thud - error */
-                error: () => {
-                    if (!audioCtx || audioMuted || document.hidden) return;
-                    const osc = audioCtx.createOscillator();
-                    const gain = audioCtx.createGain();
-                    const now = audioCtx.currentTime;
-                    osc.type = 'sine';
-                    osc.frequency.setValueAtTime(80, now);
-                    osc.frequency.exponentialRampToValueAtTime(40, now + 0.15);
-                    gain.gain.setValueAtTime(0.5, now);
-                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
-                    osc.connect(gain).connect(audioGain);
-                    osc.start(now);
-                    osc.stop(now + 0.2);
+                if (success) {
+                    addRecentFile(name, 'sent');
                 }
-            };
 
-            // Init audio on first interaction
-            document.addEventListener('click', initAudio, { once: true });
-            document.addEventListener('touchstart', initAudio, { once: true });
-
-            // ═══════════════════════════════════════════════════════════
-            // DOM ELEMENTS
-            // ═══════════════════════════════════════════════════════════
-
-            const canvas = document.getElementById('vfx');
-            const ctx = canvas.getContext('2d');
-            const fileInput = document.getElementById('fileInput');
-            const filenameEl = document.getElementById('filename');
-            const progressNumber = document.getElementById('progressNumber');
-            const hintEl = document.getElementById('hint');
-            const statusEl = document.getElementById('status');
-            const recentsDiv = document.getElementById('recents');
-
-            // ═══════════════════════════════════════════════════════════
-            // STATE
-            // ═══════════════════════════════════════════════════════════
-
-            let W, H, cx, cy;
-            const RADIUS = 70;
-            let state = 'idle'; // idle | transfer | burst
-            let progress = 0;
-            let burstR = 0;
-
-            // VFX Performance Mode
-            let vfxMode = 'high'; // high | eco
-            let lastFrameTime = 0;
-            let frameSkip = false;
-            let isPageVisible = true;
-
-            // ═══════════════════════════════════════════════════════════
-            // VISIBILITY HANDLER (Battery Saver)
-            // ═══════════════════════════════════════════════════════════
-
-            document.addEventListener('visibilitychange', () => {
-                isPageVisible = !document.hidden;
-                if (isPageVisible && state !== 'idle') {
-                    // Resume animation when page becomes visible
-                    requestAnimationFrame(render);
-                }
-                console.log('[AERO] Page visibility:', isPageVisible ? 'visible' : 'hidden');
-            });
-
-            // ═══════════════════════════════════════════════════════════
-            // ADAPTIVE VFX ENGINE
-            // ═══════════════════════════════════════════════════════════
-
-            function setPerformanceMode(mode) {
-                vfxMode = mode;
-                console.log('[VFX] Performance mode:', mode);
+                setTimeout(() => {
+                    transferPanel.classList.remove('active');
+                    selectBtn.style.display = 'flex';
+                    mainTitle.textContent = 'Send Files to PC';
+                    progressFill.style.width = '0%';
+                }, 2000);
             }
 
-            function hslToRgb(h, s, l) {
-                s /= 100; l /= 100;
-                const k = n => (n + h / 30) % 12;
-                const a = s * Math.min(l, 1 - l);
-                const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1));
-                return [Math.round(f(0) * 255), Math.round(f(8) * 255), Math.round(f(4) * 255)];
+            function addRecentFile(name, type) {
+                recentFiles.unshift({ name, type, time: Date.now() });
+                if (recentFiles.length > 3) recentFiles.pop();
+                renderRecents();
             }
 
-            function getColor(offset, alpha) {
-                const hue = (performance.now() * 0.03 + offset) % 360;
-                const [r, g, b] = hslToRgb(hue, 80, 60);
-                return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-            }
-
-            function resize() {
-                W = canvas.width = window.innerWidth;
-                H = canvas.height = window.innerHeight;
-                cx = W / 2;
-                cy = H / 2;
-            }
-            window.addEventListener('resize', resize);
-            resize();
-
-            function drawRing() {
-                const t = performance.now() * 0.001;
-                const breathe = 1 + Math.sin(t * 2) * 0.08;
-                const r = RADIUS * breathe;
-
-                // Glow (reduced in eco mode)
-                if (vfxMode === 'high') {
-                    const glow = ctx.createRadialGradient(cx, cy, r * 0.3, cx, cy, r * 1.8);
-                    glow.addColorStop(0, getColor(0, 0.15));
-                    glow.addColorStop(0.5, getColor(60, 0.08));
-                    glow.addColorStop(1, 'transparent');
-                    ctx.beginPath();
-                    ctx.arc(cx, cy, r * 1.8, 0, Math.PI * 2);
-                    ctx.fillStyle = glow;
-                    ctx.fill();
-                }
-
-                // Main ring
-                ctx.beginPath();
-                ctx.arc(cx, cy, r, 0, Math.PI * 2);
-                ctx.strokeStyle = getColor(0, 0.6);
-                ctx.lineWidth = 3;
-                ctx.stroke();
-
-                // Outer rings (skip in eco mode)
-                if (vfxMode === 'high') {
-                    ctx.beginPath();
-                    ctx.arc(cx, cy, r + 15, 0, Math.PI * 2);
-                    ctx.strokeStyle = getColor(90, 0.3);
-                    ctx.lineWidth = 1;
-                    ctx.stroke();
-
-                    ctx.beginPath();
-                    ctx.arc(cx, cy, r + 25, 0, Math.PI * 2);
-                    ctx.strokeStyle = getColor(180, 0.15);
-                    ctx.lineWidth = 1;
-                    ctx.stroke();
-                }
-
-                // Progress arc
-                if (progress > 0 && state === 'transfer') {
-                    ctx.beginPath();
-                    ctx.arc(cx, cy, r + 8, -Math.PI / 2, -Math.PI / 2 + (Math.PI * 2 * progress / 100));
-                    ctx.strokeStyle = getColor(0, 0.9);
-                    ctx.lineWidth = 4;
-                    ctx.lineCap = 'round';
-                    ctx.stroke();
-                }
-            }
-
-            function drawBurst() {
-                burstR += (250 - burstR) * 0.08;
-                const alpha = 1 - burstR / 250;
-                const rings = vfxMode === 'high' ? 4 : 2; // Fewer in eco mode
-
-                for (let i = 0; i < rings; i++) {
-                    ctx.beginPath();
-                    ctx.arc(cx, cy, burstR * (1 - i * 0.2), 0, Math.PI * 2);
-                    ctx.strokeStyle = getColor(i * 90, alpha * 0.4);
-                    ctx.lineWidth = 3;
-                    ctx.stroke();
-                }
-
-                if (burstR > 240) {
-                    state = 'idle';
-                    burstR = 0;
-                    setPerformanceMode('high'); // Restore quality
-                }
-            }
-
-            function render() {
-                // Skip if page hidden (Battery Saver)
-                if (!isPageVisible) return;
-
-                // Frame rate limiting in eco mode (30 FPS)
-                const now = performance.now();
-                if (vfxMode === 'eco') {
-                    if (now - lastFrameTime < 33) { // ~30 FPS
-                        requestAnimationFrame(render);
-                        return;
-                    }
-                }
-                lastFrameTime = now;
-
-                // Clear with trail effect
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
-                ctx.fillRect(0, 0, W, H);
-
-                drawRing();
-
-                if (state === 'burst') {
-                    drawBurst();
-                }
-
-                requestAnimationFrame(render);
-            }
-            render();
-
-            // ═══════════════════════════════════════════════════════════
-            // UI HANDLERS
-            // ═══════════════════════════════════════════════════════════
-
-            hintEl.addEventListener('click', () => {
-                if (state === 'idle') fileInput.click();
-            });
-
-            document.addEventListener('click', () => {
-                if (state === 'idle') fileInput.click();
-            });
-
-            // ═══════════════════════════════════════════════════════════
-            // UTILS
-            // ═══════════════════════════════════════════════════════════
-
-            const recents = [];
-            let ws = null;
-            let uploadData = null;
-            let receiveData = null;
-
-            const fmt = b => {
-                if (!b) return '0 B';
-                const i = Math.floor(Math.log(b) / Math.log(1024));
-                return (b / Math.pow(1024, i)).toFixed(1) + ' ' + ['B', 'KB', 'MB', 'GB'][i];
-            };
-
-            const addRecent = (name, type) => {
-                recents.unshift({ name, type });
-                if (recents.length > 3) recents.pop();
-                const html = recents.length > 0 ? '<div class="recent-header">Recent</div>' + recents.map(r => {
-                    const isSent = r.type === 'sent';
-                    const color = isSent ? '#10b981' : '#3b82f6';
-                    const bg = isSent ? 'rgba(16,185,129,0.12)' : 'rgba(59,130,246,0.12)';
-                    return `<div class="recent-item">
-                    <div class="recent-icon" style="color:${color}">${isSent ? '↑' : '↓'}</div>
-                    <div class="recent-name">${r.name}</div>
-                    <div class="recent-badge" style="background:${bg};color:${color}">${r.type}</div>
-                </div>`;
-                }).join('') : '';
-                recentsDiv.innerHTML = html;
-            };
-
-            const reset = () => {
-                state = 'idle';
-                progress = 0;
-                filenameEl.classList.remove('visible');
-                progressNumber.classList.remove('visible');
-                statusEl.classList.remove('visible');
-                hintEl.classList.remove('hidden');
-                uploadData = null;
-                receiveData = null;
-                setPerformanceMode('high');
-            };
-
-            // ═══════════════════════════════════════════════════════════
-            // WEBSOCKET MESSAGE HANDLER
-            // ═══════════════════════════════════════════════════════════
-
-            const handleMessage = e => {
-                if (e.data instanceof ArrayBuffer && receiveData) {
-                    const idx = new DataView(e.data).getUint32(0, true);
-                    receiveData.chunks[idx] = new Uint8Array(e.data, 4);
-                    progress = Math.round((receiveData.chunks.filter(c => c).length / receiveData.total) * 100);
-                    progressNumber.textContent = progress;
-                    ws.send(JSON.stringify({ ack: idx }));
+            function renderRecents() {
+                if (recentFiles.length === 0) {
+                    recentsDiv.innerHTML = '';
                     return;
                 }
 
-                try {
-                    const msg = JSON.parse(e.data);
-
-                    if (uploadData) {
-                        if (msg.status === 'ready') uploadData.ready = true;
-                        if (typeof msg.ack === 'number') {
-                            uploadData.acked++;
-                            progress = Math.round((uploadData.acked / uploadData.total) * 100);
-                            progressNumber.textContent = progress;
-                            statusEl.textContent = fmt(uploadData.sent / ((Date.now() - uploadData.t0) / 1000)) + '/s';
-                            if (uploadData.acked >= uploadData.total && uploadData.done) uploadData.done();
-                        }
-                        if (msg.status === 'success') {
-                            state = 'burst';
-                            progressNumber.textContent = '✓';
-                            statusEl.textContent = 'sent';
-                            addRecent(uploadData.name, 'sent');
-                            setTimeout(reset, 2500);
-                        }
-                    }
-
-                    if (msg.type === 'file_incoming') {
-                        state = 'transfer';
-                        setPerformanceMode('eco'); // Reduce VFX during receive
-                        receiveData = { name: msg.name, total: msg.chunks, chunks: new Array(msg.chunks) };
-                        filenameEl.textContent = msg.name;
-                        filenameEl.classList.add('visible');
-                        progressNumber.textContent = '0';
-                        progressNumber.classList.add('visible');
-                        statusEl.textContent = 'receiving';
-                        statusEl.classList.add('visible');
-                        hintEl.classList.add('hidden');
-                    }
-
-                    if (msg.type === 'file_complete' && receiveData) {
-                        const blob = new Blob(receiveData.chunks);
-                        const a = document.createElement('a');
-                        a.href = URL.createObjectURL(blob);
-                        a.download = receiveData.name;
-                        a.click();
-                        state = 'burst';
-                        progressNumber.textContent = '✓';
-                        statusEl.textContent = 'saved';
-                        addRecent(receiveData.name, 'received');
-                        setTimeout(reset, 2500);
-                    }
-                } catch (err) { }
-            };
-
-            const connect = () => {
-                ws = new WebSocket('ws://' + location.host + '/transfer');
-                ws.binaryType = 'arraybuffer';
-                ws.onmessage = handleMessage;
-                ws.onclose = () => setTimeout(connect, 2000);
-            };
-            connect();
-
-            // ═══════════════════════════════════════════════════════════
-            // ZERO-OVERHEAD UPLOAD ENGINE
-            // "Sip, don't Gulp" - Stream slicing with GC pacing
-            // ═══════════════════════════════════════════════════════════
-
-            /**
-             * Upload file using surgical stream slicing.
-             * Never loads entire file into memory.
-             * Explicitly dereferences buffers to allow GC.
-             * 
-             * @param {File} file - The file to upload
-             * @returns {Promise<{success: boolean, failedAt?: number}>}
-             */
-            async function upload(file) {
-                if (state !== 'idle') return { success: false };
-
-                state = 'transfer';
-                setPerformanceMode('eco'); // Reduce VFX for CPU headroom
-
-                const total = Math.ceil(file.size / MAX_CHUNK_SIZE);
-                uploadData = {
-                    name: file.name,
-                    total,
-                    acked: 0,
-                    sent: 0,
-                    t0: Date.now(),
-                    ready: false,
-                    done: null,
-                    failedAt: null
-                };
-
-                // Setup UI
-                filenameEl.textContent = file.name;
-                filenameEl.classList.add('visible');
-                progressNumber.textContent = '0';
-                progressNumber.classList.add('visible');
-                statusEl.textContent = 'connecting';
-                statusEl.classList.add('visible');
-                hintEl.classList.add('hidden');
-                progress = 0;
-
-                try {
-                    // Signal file start
-                    ws.send(JSON.stringify({ name: file.name, size: file.size, chunks: total }));
-
-                    // Wait for server ready
-                    await new Promise((resolve, reject) => {
-                        const check = () => uploadData.ready ? resolve() : setTimeout(check, 10);
-                        check();
-                        setTimeout(() => reject(new Error('timeout')), 10000);
-                    });
-
-                    statusEl.textContent = 'sending';
-
-                    // ═══════════════════════════════════════════════════════
-                    // STREAM SLICING LOOP
-                    // Key: Only one chunk in memory at a time
-                    // ═══════════════════════════════════════════════════════
-
-                    for (let i = 0; i < total; i++) {
-                        const start = i * MAX_CHUNK_SIZE;
-                        const end = Math.min((i + 1) * MAX_CHUNK_SIZE, file.size);
-
-                        // 1. Create a Blob "pointer" (no memory allocation)
-                        const slice = file.slice(start, end);
-
-                        // 2. Read only this slice into memory
-                        let buffer = await slice.arrayBuffer();
-
-                        // 3. Prepare header (4-byte chunk index)
-                        const header = new ArrayBuffer(4);
-                        new DataView(header).setUint32(0, i, true);
-
-                        // 4. Combine header + data
-                        const packet = new Uint8Array(4 + buffer.byteLength);
-                        packet.set(new Uint8Array(header), 0);
-                        packet.set(new Uint8Array(buffer), 4);
-
-                        // 5. Send packet
-                        ws.send(packet);
-                        uploadData.sent += buffer.byteLength;
-
-                        // 6. CRITICAL: Dereference buffer immediately
-                        // This allows GC to reclaim memory before next chunk
-                        buffer = null;
-
-                        // 7. Yield to browser (GC + UI updates)
-                        if (i % 5 === 0) {
-                            await new Promise(r => setTimeout(r, GC_YIELD_MS));
-                        }
-                    }
-
-                    // Wait for all ACKs
-                    statusEl.textContent = 'verifying';
-                    await new Promise(resolve => {
-                        uploadData.done = resolve;
-                        if (uploadData.acked >= total) resolve();
-                        setTimeout(resolve, 60000);
-                    });
-
-                    // Signal completion
-                    ws.send(JSON.stringify({ done: true }));
-
-                    return { success: true };
-
-                } catch (e) {
-                    console.error('[UPLOAD] Failed:', e);
-                    statusEl.textContent = 'failed';
-                    uploadData.failedAt = uploadData.sent;
-                    state = 'idle';
-                    setTimeout(reset, 2000);
-
-                    // Return failure info for potential resume
-                    return {
-                        success: false,
-                        failedAt: uploadData.sent,
-                        error: e.message
-                    };
-                }
+                let html = '<div class="recents-header">Recent Transfers</div>';
+                recentFiles.forEach(f => {
+                    const icon = f.type === 'sent' ? '↑' : '↓';
+                    html += `
+                        <div class="recent-item">
+                            <div class="recent-icon">${icon}</div>
+                            <div class="recent-name">${f.name}</div>
+                            <div class="recent-badge">${f.type}</div>
+                        </div>
+                    `;
+                });
+                recentsDiv.innerHTML = html;
             }
 
-            fileInput.onchange = () => {
-                if (fileInput.files[0]) upload(fileInput.files[0]);
-                fileInput.value = '';
-            };
+            function formatSpeed(bytesPerSec) {
+                if (bytesPerSec < 1024) return bytesPerSec.toFixed(0) + ' B/s';
+                if (bytesPerSec < 1024 * 1024) return (bytesPerSec / 1024).toFixed(1) + ' KB/s';
+                return (bytesPerSec / (1024 * 1024)).toFixed(1) + ' MB/s';
+            }
 
-            // Expose for debugging
-            window.AERO = { upload, setPerformanceMode, getState: () => ({ state, progress, vfxMode }) };
+            function formatEta(seconds) {
+                if (!seconds || seconds === Infinity) return '--';
+                if (seconds < 60) return Math.ceil(seconds) + 's';
+                const mins = Math.floor(seconds / 60);
+                const secs = Math.ceil(seconds % 60);
+                return mins + 'm ' + secs + 's';
+            }
+
+            // Haptics
+            const haptics = {
+                tick: () => navigator.vibrate?.(5),
+                success: () => navigator.vibrate?.([50, 30, 50]),
+                error: () => navigator.vibrate?.([300]),
+            };
         })();
     </script>
 </body>
