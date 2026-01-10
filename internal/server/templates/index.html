@@ -240,26 +240,21 @@
         }
 
         .cancel-btn {
-            padding: 6px 12px;
+            width: 100%;
+            padding: 10px 0 4px 0;
+            margin-top: 8px;
             font-size: 11px;
-            font-weight: 600;
-            color: #ef4444;
-            background: rgba(239, 68, 68, 0.1);
-            border: 1px solid rgba(239, 68, 68, 0.3);
-            border-radius: 6px;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.25);
+            background: none;
+            border: none;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
             cursor: pointer;
-            transition: all 0.2s;
+            transition: color 0.2s;
         }
 
         .cancel-btn:hover {
-            background: rgba(239, 68, 68, 0.2);
-            border-color: rgba(239, 68, 68, 0.5);
-        }
-
-        .header-actions {
-            display: flex;
-            align-items: center;
-            gap: 8px;
+            color: #ef4444;
         }
 
         /* Progress Bar */
@@ -424,10 +419,7 @@
                             <div class="transfer-status" id="transferStatus">Sending...</div>
                         </div>
                     </div>
-                    <div class="header-actions">
-                        <button class="cancel-btn" id="cancelBtn">Cancel</button>
-                        <div class="live-badge">Live</div>
-                    </div>
+                    <div class="live-badge">Live</div>
                 </div>
                 <div class="progress-bar">
                     <div class="progress-fill" id="progressFill" style="width: 0%"></div>
@@ -446,6 +438,7 @@
                         <div class="stat-value" id="etaStat">--</div>
                     </div>
                 </div>
+                <button class="cancel-btn" id="cancelBtn">Tap to cancel</button>
             </div>
 
             <!-- Recent Files -->
