@@ -163,12 +163,32 @@ func (s *Server) StartWithContext(ctx context.Context, ip string) error {
 		return err
 	}
 
+	// 🚀 SPEED: Enable TCP NoDelay (Nagle's Algorithm off) for lower latency
+	tunedListener := &tunedListener{Listener: listener}
+
 	go func() {
 		<-ctx.Done()
 		s.httpServer.Close()
 	}()
 
-	return s.httpServer.Serve(listener)
+	return s.httpServer.Serve(tunedListener)
+}
+
+// tunedListener sets TCP socket options for max performance
+type tunedListener struct {
+	net.Listener
+}
+
+func (l *tunedListener) Accept() (net.Conn, error) {
+	c, err := l.Listener.Accept()
+	if err != nil {
+		return nil, err
+	}
+	// Disable Nagle's algorithm for lower latency
+	if tc, ok := c.(*net.TCPConn); ok {
+		tc.SetNoDelay(true)
+	}
+	return c, nil
 }
 
 func (s *Server) Shutdown(ctx context.Context) error {
