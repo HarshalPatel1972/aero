@@ -358,6 +358,42 @@
             color: var(--cyan);
         }
 
+        /* Stats Banner */
+        .stats-banner {
+            width: 100%;
+            max-width: 320px;
+            padding: 12px 16px;
+            background: linear-gradient(135deg, rgba(0, 229, 255, 0.1), rgba(0, 229, 255, 0.05));
+            border: 1px solid var(--cyan);
+            border-radius: 12px;
+            margin-bottom: 20px;
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+
+        .stats-banner.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .stats-banner-title {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .stats-banner-content {
+            font-size: 14px;
+            font-weight: 600;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--cyan);
+            line-height: 1.4;
+        }
+
         /* Bottom Bar */
         .bottom-bar {
             display: flex;
@@ -391,6 +427,12 @@
 
         <!-- Main Content -->
         <div class="main-content">
+            <!-- Stats Banner (shows for 5s after transfer) -->
+            <div class="stats-banner" id="statsBanner">
+                <div class="stats-banner-title">Last Transfer</div>
+                <div class="stats-banner-content" id="statsContent">--</div>
+            </div>
+
             <h1 class="main-title" id="mainTitle">Send Files to PC</h1>
 
             <!-- Action Button -->
@@ -477,6 +519,8 @@
             const recentsDiv = document.getElementById('recents');
             const mainTitle = document.getElementById('mainTitle');
             const cancelBtn = document.getElementById('cancelBtn');
+            const statsBanner = document.getElementById('statsBanner');
+            const statsContent = document.getElementById('statsContent');
 
             // State
             let recentFiles = [];
@@ -791,22 +835,28 @@
 
             function transferComplete(name, success, totalBytes, totalTime, avgSpeed) {
                 activeXHR = null; // Clear reference
-                mainTitle.textContent = success ? 'Transfer Complete!' : 'Transfer Failed';
 
-                // Show detailed stats on success
+                // Show stats in dedicated banner for 5 seconds
                 if (success && totalBytes && totalTime) {
                     const sizeMB = (totalBytes / (1024 * 1024)).toFixed(2);
                     const speedMBps = (avgSpeed / (1024 * 1024)).toFixed(2);
                     const timeSec = totalTime.toFixed(2);
 
-                    transferStatus.textContent = `${sizeMB} MB in ${timeSec}s @ ${speedMBps} MB/s`;
+                    // Update banner
+                    statsContent.textContent = `${name}\n${sizeMB} MB in ${timeSec}s @ ${speedMBps} MB/s`;
+                    statsBanner.classList.add('show');
+
+                    // Hide after 5 seconds
+                    setTimeout(() => {
+                        statsBanner.classList.remove('show');
+                    }, 5000);
+
                     console.log(`[STATS] 📊 ${name}: ${sizeMB} MB | ${timeSec}s | ${speedMBps} MB/s`);
-                } else if (success) {
-                    transferStatus.textContent = 'Sent successfully';
-                } else {
-                    transferStatus.textContent = 'Error occurred';
                 }
 
+                // Update transfer panel (which will hide after 2s)
+                mainTitle.textContent = success ? 'Transfer Complete!' : 'Transfer Failed';
+                transferStatus.textContent = success ? 'Sent successfully' : 'Error occurred';
                 progressFill.style.width = '100%';
                 progressStat.textContent = '100%';
 
@@ -819,7 +869,7 @@
                     selectBtn.style.display = 'flex';
                     mainTitle.textContent = 'Send Files to PC';
                     progressFill.style.width = '0%';
-                }, 3000); // Extended to 3s to read stats
+                }, 2000);
             }
 
             function addRecentFile(name, type) {
