@@ -121,6 +121,7 @@ func NewServerWithKey(cfg config.Config, storageService storage.Service, key []b
 	mux.HandleFunc("/", s.handleIndex)
 	mux.HandleFunc("/upload", s.handleUpload)
 	mux.HandleFunc("/stream", s.handleStreamUpload) // Term-Phase 3: pooled buffer handler
+	mux.HandleFunc("/parallel-upload", s.handleParallelUpload) // Speed Phase 3: Multi-stream engine
 	mux.HandleFunc("/transfer", s.handleTransfer)
 	mux.HandleFunc("/health", s.handleHealth)
 	// Term-Phase 5: Hub routes

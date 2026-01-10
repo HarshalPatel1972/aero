@@ -669,6 +669,7 @@
             }
 
             // Upload file
+            // 🚀 SPEED PHASE 3: Parallel Multi-Stream Upload (50+ MB/s)
             async function uploadFile(file) {
                 mainTitle.textContent = 'Sending...';
                 fileName.textContent = file.name;
@@ -676,63 +677,112 @@
                 transferPanel.classList.add('active');
                 selectBtn.style.display = 'none';
 
+                const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB per chunk
+                const MAX_PARALLEL = 6; // 6 concurrent streams
                 const totalSize = file.size;
-                let uploaded = 0;
+                const totalChunks = Math.ceil(totalSize / CHUNK_SIZE);
+                const sessionId = Date.now().toString() + Math.random().toString(36);
+
                 let startTime = Date.now();
                 let lastTime = startTime;
                 let lastBytes = 0;
 
-                try {
+                // Track progress for each chunk
+                const chunkProgress = new Array(totalChunks).fill(0);
+                const activeUploads = new Set();
+                const uploadQueue = [];
+
+                // Populate upload queue
+                for (let i = 0; i < totalChunks; i++) {
+                    uploadQueue.push(i);
+                }
+
+                // Upload single chunk
+                const uploadChunk = async (chunkIdx) => {
+                    const start = chunkIdx * CHUNK_SIZE;
+                    const end = Math.min(start + CHUNK_SIZE, totalSize);
+                    const blob = file.slice(start, end);
+
                     const xhr = new XMLHttpRequest();
-                    activeXHR = xhr; // Store reference for cancel
+                    xhr.open('POST', '/parallel-upload', true);
 
-                    // Term-Phase 4: Use /stream endpoint for High-Performance Engine
-                    // This bypasses multipart overhead and uses zero-alloc pool
-                    xhr.open('POST', '/stream', true);
-
-                    // Essential metadata headers for /stream
+                    // Set headers for parallel upload
+                    xhr.setRequestHeader('X-Session-Id', sessionId);
                     xhr.setRequestHeader('X-Filename', encodeURIComponent(file.name));
-                    xhr.setRequestHeader('X-Filesize', totalSize.toString());
+                    xhr.setRequestHeader('X-Chunk-Index', chunkIdx.toString());
+                    xhr.setRequestHeader('X-Total-Chunks', totalChunks.toString());
+                    xhr.setRequestHeader('X-Offset', start.toString());
+                    xhr.setRequestHeader('X-Total-Size', totalSize.toString());
 
+                    // Track individual chunk progress
                     xhr.upload.onprogress = (e) => {
                         if (e.lengthComputable) {
-                            uploaded = e.loaded;
-                            const progress = Math.round((uploaded / totalSize) * 100);
-                            progressFill.style.width = progress + '%';
-                            progressStat.textContent = progress + '%';
+                            chunkProgress[chunkIdx] = e.loaded;
+                            updateTotalProgress();
+                        }
+                    };
 
-                            const now = Date.now();
-                            const timeDiff = (now - lastTime) / 1000;
-                            if (timeDiff >= 0.5) {
-                                const bytesDiff = uploaded - lastBytes;
-                                const speed = bytesDiff / timeDiff;
-                                speedStat.textContent = formatSpeed(speed);
-
-                                const remaining = totalSize - uploaded;
-                                const eta = speed > 0 ? remaining / speed : 0;
-                                etaStat.textContent = formatEta(eta);
-
-                                lastTime = now;
-                                lastBytes = uploaded;
+                    return new Promise((resolve, reject) => {
+                        xhr.onload = () => {
+                            if (xhr.status === 200) {
+                                chunkProgress[chunkIdx] = blob.size; // Mark complete
+                                resolve(chunkIdx);
+                            } else {
+                                reject(new Error(`Chunk ${chunkIdx} failed`));
                             }
+                        };
+                        xhr.onerror = () => reject(new Error(`Chunk ${chunkIdx} network error`));
+                        xhr.send(blob);
+                    });
+                };
+
+                // Update aggregated progress from all streams
+                const updateTotalProgress = () => {
+                    const uploaded = chunkProgress.reduce((a, b) => a + b, 0);
+                    const progress = Math.min(100, Math.round((uploaded / totalSize) * 100));
+
+                    progressFill.style.width = progress + '%';
+                    progressStat.textContent = progress + '%';
+
+                    const now = Date.now();
+                    const timeDiff = (now - lastTime) / 1000;
+                    if (timeDiff >= 0.5) {
+                        const bytesDiff = uploaded - lastBytes;
+                        const speed = bytesDiff / timeDiff;
+                        speedStat.textContent = formatSpeed(speed);
+
+                        const remaining = totalSize - uploaded;
+                        const eta = speed > 0 ? remaining / speed : 0;
+                        etaStat.textContent = formatEta(eta);
+
+                        lastTime = now;
+                        lastBytes = uploaded;
+                    }
+                };
+
+                try {
+                    // Worker pool: maintain MAX_PARALLEL concurrent uploads
+                    while (uploadQueue.length > 0 || activeUploads.size > 0) {
+                        // Spawn workers up to limit
+                        while (activeUploads.size < MAX_PARALLEL && uploadQueue.length > 0) {
+                            const idx = uploadQueue.shift();
+                            const promise = uploadChunk(idx).finally(() => {
+                                activeUploads.delete(promise);
+                            });
+                            activeUploads.add(promise);
                         }
-                    };
 
-                    xhr.onload = () => {
-                        if (xhr.status === 200) {
-                            transferComplete(file.name, true);
-                        } else {
-                            transferComplete(file.name, false);
+                        // Wait for at least one to complete
+                        if (activeUploads.size > 0) {
+                            await Promise.race(activeUploads);
                         }
-                    };
+                    }
 
-                    xhr.onerror = () => transferComplete(file.name, false);
-
-                    // Send RAW file body (no FormData/multipart overhead)
-                    xhr.send(file);
+                    // All chunks uploaded successfully
+                    transferComplete(file.name, true);
 
                 } catch (error) {
-                    console.error('Upload failed:', error);
+                    console.error('Parallel upload failed:', error);
                     transferComplete(file.name, false);
                 }
             }
