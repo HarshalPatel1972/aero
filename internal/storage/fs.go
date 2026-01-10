@@ -40,6 +40,10 @@ type Service interface {
 	// WriteStream writes data from the stream to a file with the given filename.
 	// It guarantees atomic writes: either the complete file is written or nothing.
 	WriteStream(filename string, stream io.Reader) error
+	
+	// CreateWriter returns an io.WriteCloser for streaming writes.
+	// Caller is responsible for closing the writer.
+	CreateWriter(filename string) (io.WriteCloser, error)
 }
 
 // FileStorage implements Service using the local filesystem.
@@ -120,5 +124,54 @@ func (fs *FileStorage) WriteStream(filename string, stream io.Reader) error {
 	}
 
 	success = true
+	return nil
+}
+
+// CreateWriter returns a WriteCloser for the given filename.
+// Uses temp file + rename pattern for atomic writes.
+func (fs *FileStorage) CreateWriter(filename string) (io.WriteCloser, error) {
+	finalPath := filepath.Join(fs.uploadDir, filepath.Clean(filename))
+	partPath := finalPath + ".part"
+
+	partFile, err := os.Create(partPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create temp file: %w", err)
+	}
+
+	return &atomicWriter{
+		file:      partFile,
+		partPath:  partPath,
+		finalPath: finalPath,
+	}, nil
+}
+
+// atomicWriter wraps os.File to provide atomic rename on close
+type atomicWriter struct {
+	file      *os.File
+	partPath  string
+	finalPath string
+	closed    bool
+}
+
+func (w *atomicWriter) Write(p []byte) (n int, err error) {
+	return w.file.Write(p)
+}
+
+func (w *atomicWriter) Close() error {
+	if w.closed {
+		return nil
+	}
+	w.closed = true
+
+	if err := w.file.Close(); err != nil {
+		os.Remove(w.partPath)
+		return err
+	}
+
+	if err := os.Rename(w.partPath, w.finalPath); err != nil {
+		os.Remove(w.partPath)
+		return err
+	}
+
 	return nil
 }

@@ -71,6 +71,7 @@ type Server struct {
 	sessionKeyBase64 string
 	onTransfer       TransferCallback
 	tempDir          string
+	ctx              context.Context // Wails context for event emission
 
 	// Connected phone clients
 	clients   map[string]*PhoneClient
@@ -115,6 +116,7 @@ func NewServerWithKey(cfg config.Config, storageService storage.Service, key []b
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", s.handleIndex)
 	mux.HandleFunc("/upload", s.handleUpload)
+	mux.HandleFunc("/stream", s.handleStreamUpload) // Term-Phase 3: pooled buffer handler
 	mux.HandleFunc("/transfer", s.handleTransfer)
 	mux.HandleFunc("/health", s.handleHealth)
 
@@ -135,6 +137,7 @@ func (s *Server) Start() error {
 }
 
 func (s *Server) StartWithContext(ctx context.Context, ip string) error {
+	s.ctx = ctx // Store for handlers to emit events
 	addr := fmt.Sprintf("%s:%s", ip, s.config.Port)
 	s.httpServer.Addr = addr
 	log.Printf("[AERO] Starting on %s", addr)
