@@ -284,6 +284,132 @@
             })();
 
             // ═══════════════════════════════════════════════════════════
+            // HAPTIC FEEDBACK SYSTEM
+            // Term-Phase 9: "Glass & Air" - Sharp ticks, not buzzy
+            // ═══════════════════════════════════════════════════════════
+
+            const haptics = {
+                /** Tiny tick - like a watch gear (hover/orbit touch) */
+                tick: () => navigator.vibrate?.(5),
+
+                /** Start transfer */
+                start: () => navigator.vibrate?.(20),
+
+                /** Success - double tap */
+                success: () => navigator.vibrate?.([50, 30, 50]),
+
+                /** Error - long buzz */
+                error: () => navigator.vibrate?.([300]),
+
+                /** Peer connected */
+                link: () => navigator.vibrate?.([10, 20, 10]),
+            };
+
+            // ═══════════════════════════════════════════════════════════
+            // AUDIO ENGINE (Web Audio Synthesis)
+            // No external files - sounds generated mathematically
+            // ═══════════════════════════════════════════════════════════
+
+            let audioCtx = null;
+            let audioGain = null;
+            let audioMuted = false;
+
+            function initAudio() {
+                if (audioCtx) return;
+                try {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                    audioGain = audioCtx.createGain();
+                    audioGain.gain.value = 0.3; // -10dB (subtle)
+                    audioGain.connect(audioCtx.destination);
+                    console.log('[AUDIO] ✅ Sound engine ready');
+                } catch (e) {
+                    console.warn('[AUDIO] ⚠️ Web Audio unavailable');
+                }
+            }
+
+            const sounds = {
+                /** Pop - peer connects */
+                link: () => {
+                    if (!audioCtx || audioMuted || document.hidden) return;
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    const now = audioCtx.currentTime;
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(880, now);
+                    osc.frequency.exponentialRampToValueAtTime(1760, now + 0.05);
+                    gain.gain.setValueAtTime(0, now);
+                    gain.gain.linearRampToValueAtTime(0.4, now + 0.01);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+                    osc.connect(gain).connect(audioGain);
+                    osc.start(now);
+                    osc.stop(now + 0.15);
+                },
+
+                /** Whoosh - transfer starts */
+                ignite: () => {
+                    if (!audioCtx || audioMuted || document.hidden) return;
+                    const bufLen = audioCtx.sampleRate * 0.3;
+                    const buf = audioCtx.createBuffer(1, bufLen, audioCtx.sampleRate);
+                    const data = buf.getChannelData(0);
+                    for (let i = 0; i < bufLen; i++) data[i] = Math.random() * 2 - 1;
+                    const noise = audioCtx.createBufferSource();
+                    noise.buffer = buf;
+                    const filter = audioCtx.createBiquadFilter();
+                    filter.type = 'bandpass';
+                    filter.Q.value = 2;
+                    const gain = audioCtx.createGain();
+                    const now = audioCtx.currentTime;
+                    filter.frequency.setValueAtTime(200, now);
+                    filter.frequency.exponentialRampToValueAtTime(4000, now + 0.25);
+                    gain.gain.setValueAtTime(0, now);
+                    gain.gain.linearRampToValueAtTime(0.3, now + 0.05);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+                    noise.connect(filter).connect(gain).connect(audioGain);
+                    noise.start(now);
+                    noise.stop(now + 0.3);
+                },
+
+                /** Glassy chord - success */
+                land: () => {
+                    if (!audioCtx || audioMuted || document.hidden) return;
+                    const now = audioCtx.currentTime;
+                    [523.25, 659.25, 783.99, 987.77].forEach((freq, i) => {
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+                        osc.type = i % 2 === 0 ? 'sine' : 'triangle';
+                        osc.frequency.value = freq;
+                        const d = i * 0.02;
+                        gain.gain.setValueAtTime(0, now + d);
+                        gain.gain.linearRampToValueAtTime(0.15, now + d + 0.02);
+                        gain.gain.exponentialRampToValueAtTime(0.001, now + d + 0.5);
+                        osc.connect(gain).connect(audioGain);
+                        osc.start(now + d);
+                        osc.stop(now + d + 0.5);
+                    });
+                },
+
+                /** Low thud - error */
+                error: () => {
+                    if (!audioCtx || audioMuted || document.hidden) return;
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    const now = audioCtx.currentTime;
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(80, now);
+                    osc.frequency.exponentialRampToValueAtTime(40, now + 0.15);
+                    gain.gain.setValueAtTime(0.5, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+                    osc.connect(gain).connect(audioGain);
+                    osc.start(now);
+                    osc.stop(now + 0.2);
+                }
+            };
+
+            // Init audio on first interaction
+            document.addEventListener('click', initAudio, { once: true });
+            document.addEventListener('touchstart', initAudio, { once: true });
+
+            // ═══════════════════════════════════════════════════════════
             // DOM ELEMENTS
             // ═══════════════════════════════════════════════════════════
 
