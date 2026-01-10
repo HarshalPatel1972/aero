@@ -127,6 +127,10 @@ func NewServerWithKey(cfg config.Config, storageService storage.Service, key []b
 	mux.HandleFunc("/hub", s.handleHubWebSocket)
 	mux.HandleFunc("/relay", s.handleRelay)
 	mux.HandleFunc("/download/", s.handleRelayDownload)
+	// Term-Phase 6: Trinity features
+	mux.HandleFunc("/api/clipboard", s.handleClipboard)
+	mux.HandleFunc("/api/folder", s.handleFolderDownload)
+	mux.HandleFunc("/api/file", s.handleFileDownload)
 
 	s.httpServer = &http.Server{
 		Addr:         ":" + cfg.Port,
