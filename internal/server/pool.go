@@ -2,7 +2,7 @@
 // pool.go: Zero-allocation buffer pool using sync.Pool
 //
 // Term-Phase 3: Memory Manager
-// Goal: Keep Go process under 50MB RAM even for 50GB transfers.
+// Speed Branch: Optimized for 20+ MB/s LAN transfers
 
 package server
 
@@ -11,8 +11,8 @@ import (
 )
 
 // BufferSize is the standard chunk size for transfers.
-// 32KB is optimal for most network conditions and disk I/O.
-const BufferSize = 32 * 1024 // 32KB
+// 256KB is optimal for fast LAN transfers (reduces syscalls).
+const BufferSize = 256 * 1024 // 256KB (was 32KB)
 
 // bufferPool is a global pool of reusable byte slices.
 // This eliminates GC pressure from constant allocations in the hot path.
@@ -44,10 +44,10 @@ func PutBuffer(buf *[]byte) {
 }
 
 // SmallBufferSize for adaptive chunking on slow networks
-const SmallBufferSize = 4 * 1024 // 4KB
+const SmallBufferSize = 64 * 1024 // 64KB (was 4KB)
 
-// LargeBufferSize for adaptive chunking on fast networks
-const LargeBufferSize = 16 * 1024 // 16KB
+// LargeBufferSize for adaptive chunking on fast networks (>20MB/s)
+const LargeBufferSize = 1024 * 1024 // 1MB (was 16KB)
 
 // smallBufferPool for slow/jittery connections
 var smallBufferPool = sync.Pool{
