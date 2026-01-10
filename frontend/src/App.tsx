@@ -113,7 +113,7 @@ function TitleBar() {
           <Minus className="w-4 h-4 text-white/40" />
         </button>
         <button
-          onClick={() => window.runtime?.WindowClose()}
+          onClick={() => window.runtime?.Quit()}
           className="p-2 rounded-lg hover:bg-red-500/20 transition-all duration-200 
             group active:scale-95 transform-gpu"
           aria-label="Close"
@@ -201,38 +201,38 @@ function NetworkSelector({
 
 function QRZone({ url, active }: { url: string; active: boolean }) {
   return (
-    <div className="flex flex-col items-center gap-5">
-      {/* Big Label */}
-      <h2 className="text-xl font-bold text-white/90 tracking-tight">
-        {active ? 'Receive Files' : 'Ready to Connect'}
+    <div className="flex flex-col items-center gap-3">
+      {/* Header - single message */}
+      <h2 className="text-lg font-bold text-white/90 tracking-tight text-center">
+        {active ? 'Scan to Transfer Files' : 'Start Server to Connect'}
       </h2>
       
       {/* QR Container */}
       <div className={`
-        relative p-5 rounded-3xl
+        relative p-3 rounded-2xl
         bg-white transition-all duration-500
         ${active ? 'shadow-glow-cyan animate-breathe' : 'opacity-50'}
       `}>
         {/* Glow */}
         {active && (
-          <div className="absolute inset-0 bg-aero-cyan/30 rounded-3xl blur-2xl -z-10" />
+          <div className="absolute inset-0 bg-aero-cyan/30 rounded-2xl blur-2xl -z-10" />
         )}
         
         <QRCodeSVG
           value={url || 'https://aero.app'}
-          size={160}
+          size={140}
           level="M"
           bgColor="transparent"
           fgColor={active ? '#050505' : '#666666'}
         />
       </div>
 
-      {/* Instructions */}
-      <p className="text-base text-white/50 text-center max-w-[240px]">
-        {active 
-          ? 'Scan with your phone camera to start transferring' 
-          : 'Start server to connect devices'}
-      </p>
+      {/* Simple subtitle only when active */}
+      {active && (
+        <p className="text-sm text-white/50 text-center">
+          Point your phone camera at the QR code
+        </p>
+      )}
     </div>
   );
 }
@@ -259,13 +259,13 @@ function ActionButtons({
         onClick={onToggle}
         disabled={loading}
         className={`
-          relative w-16 h-16 rounded-2xl
+          relative w-14 h-14 rounded-xl
           flex items-center justify-center
           transition-all duration-300
           active:scale-95 transform-gpu
           ${active 
-            ? 'bg-aero-cyan/20 text-aero-cyan shadow-glow-cyan' 
-            : 'bg-void-elevated text-white/40 hover:bg-void-border hover:text-white/60'}
+            ? 'bg-aero-cyan/30 text-aero-cyan border-2 border-aero-cyan shadow-glow-cyan' 
+            : 'bg-white/10 text-white border-2 border-white/40 hover:bg-white/20 hover:border-white/60'}
           ${loading ? 'cursor-wait' : ''}
         `}
         aria-label={active ? 'Stop' : 'Start'}
@@ -286,10 +286,11 @@ function ActionButtons({
         <button
           onClick={onSendToPhone}
           className="
-            w-16 h-16 rounded-2xl
+            w-14 h-14 rounded-xl
             flex items-center justify-center
-            bg-void-elevated text-white/60
-            hover:bg-aero-cyan/10 hover:text-aero-cyan
+            bg-white/10 text-white
+            border-2 border-white/40
+            hover:bg-aero-cyan/20 hover:text-aero-cyan hover:border-aero-cyan/60
             transition-all duration-300
             active:scale-95 transform-gpu
           "

@@ -40,13 +40,13 @@ func main() {
 
 	// Run Wails application
 	err := wails.Run(&options.App{
-		Title:     "AERO",
+		Title:     "Aero",
 		Width:     400,
-		Height:    600,
+		Height:    720,
 		MinWidth:  400,
-		MinHeight: 600,
+		MinHeight: 720,
 		MaxWidth:  400,
-		MaxHeight: 600,
+		MaxHeight: 720,
 
 		// Frameless for custom title bar
 		Frameless:         true,
