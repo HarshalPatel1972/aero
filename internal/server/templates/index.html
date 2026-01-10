@@ -524,6 +524,116 @@
                 if (key) await importKey(key);
             })();
 
+            // ═══════════════════════════════════════════════════════════
+            // WebSocket Client (Phone -> PC presence & Download)
+            // ═══════════════════════════════════════════════════════════
+
+            let ws;
+            let incomingFile = null;
+            let receivedChunks = [];
+            let receivedBytes = 0;
+            let receiveStartTime = 0;
+            let receiveLastTime = 0;
+            let receiveLastBytes = 0;
+
+            function connectWebSocket() {
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                ws = new WebSocket(`${protocol}//${window.location.host}/transfer`);
+                ws.binaryType = 'arraybuffer'; // Critical for binary handling
+
+                ws.onopen = () => {
+                    document.querySelector('.bottom-bar span').textContent = 'Connected to PC';
+                    document.querySelector('.bottom-bar span').style.color = '#22d3ee'; // Aero Cyan
+                    haptics.success();
+                };
+
+                ws.onclose = () => {
+                    document.querySelector('.bottom-bar span').textContent = 'Disconnected...';
+                    document.querySelector('.bottom-bar span').style.color = '#ef4444'; // Red
+                    setTimeout(connectWebSocket, 2000);
+                };
+
+                ws.onmessage = (event) => {
+                    if (event.data instanceof ArrayBuffer) {
+                        handleBinaryChunk(event.data);
+                    } else {
+                        try {
+                            const msg = JSON.parse(event.data);
+                            handleControlMessage(msg);
+                        } catch (e) { console.error(e); }
+                    }
+                };
+            }
+
+            function handleControlMessage(msg) {
+                if (msg.type === 'file_incoming') {
+                    // Start download UI
+                    incomingFile = msg;
+                    receivedChunks = [];
+                    receivedBytes = 0;
+                    receiveStartTime = Date.now();
+                    receiveLastTime = receiveStartTime;
+                    receiveLastBytes = 0;
+
+                    mainTitle.textContent = 'Receiving...';
+                    fileName.textContent = msg.name;
+                    transferStatus.textContent = formatBytes(msg.size);
+                    transferPanel.classList.add('active');
+                    selectBtn.style.display = 'none';
+                    haptics.tick();
+                }
+                else if (msg.type === 'file_complete') {
+                    // Finish & Save
+                    transferComplete(msg.name, true);
+                    saveFile(msg.name);
+                }
+            }
+
+            function handleBinaryChunk(buffer) {
+                // Strip 4-byte header (chunk index)
+                const data = buffer.slice(4);
+                receivedChunks.push(data);
+                receivedBytes += data.byteLength;
+
+                // Update UI
+                if (incomingFile) {
+                    const progress = Math.min(100, Math.round((receivedBytes / incomingFile.size) * 100));
+                    progressFill.style.width = progress + '%';
+                    progressStat.textContent = progress + '%';
+
+                    const now = Date.now();
+                    const timeDiff = (now - receiveLastTime) / 1000;
+                    if (timeDiff >= 0.5) {
+                        const bytesDiff = receivedBytes - receiveLastBytes;
+                        const speed = bytesDiff / timeDiff;
+                        speedStat.textContent = formatSpeed(speed);
+
+                        const remaining = incomingFile.size - receivedBytes;
+                        const eta = speed > 0 ? remaining / speed : 0;
+                        etaStat.textContent = formatEta(eta);
+
+                        receiveLastTime = now;
+                        receiveLastBytes = receivedBytes;
+                    }
+                }
+            }
+
+            function saveFile(filename) {
+                const blob = new Blob(receivedChunks, { type: 'application/octet-stream' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+                addRecentFile(filename, 'received');
+            }
+
+            // Connect immediately
+            connectWebSocket();
+
             // File selection
             selectBtn.addEventListener('click', () => fileInput.click());
             fileInput.addEventListener('change', async (e) => {
