@@ -143,34 +143,9 @@ func NewServerWithKey(cfg config.Config, storageService storage.Service, key []b
 	return s, nil
 }
 
-// Custom listener for setting TCP buffer sizes
-type tcpKeepAliveListener struct {
-	*net.TCPListener
-}
-
-func (ln tcpKeepAliveListener) Accept() (net.Conn, error) {
-	tc, err := ln.AcceptTCP()
-	if err != nil {
-		return nil, err
-	}
-	tc.SetKeepAlive(true)
-	tc.SetKeepAlivePeriod(3 * time.Minute)
-	
-	// SPEED OPTIMIZATION: 4MB TCP Buffers
-	// This prevents window-full stalls on high-latency WiFi
-	tc.SetReadBuffer(4 * 1024 * 1024)
-	tc.SetWriteBuffer(4 * 1024 * 1024)
-	
-	return tc, nil
-}
-
 func (s *Server) Start() error {
 	log.Printf("[AERO] Server starting on port %s", s.config.Port)
-	listener, err := net.Listen("tcp", ":"+s.config.Port)
-	if err != nil {
-		return err
-	}
-	return s.httpServer.Serve(tcpKeepAliveListener{listener.(*net.TCPListener)})
+	return s.httpServer.ListenAndServe()
 }
 
 func (s *Server) SetWailsContext(ctx context.Context) {
@@ -188,13 +163,34 @@ func (s *Server) StartWithContext(ctx context.Context, ip string) error {
 		return err
 	}
 
+	// 🚀 SPEED: Wrap listener to tune TCP buffers for high-speed LAN
+	tunedListener := &tunedListener{Listener: listener}
+
 	go func() {
 		<-ctx.Done()
 		s.httpServer.Close()
 	}()
 
-	// Use custom listener for 4MB TCP buffers
-	return s.httpServer.Serve(tcpKeepAliveListener{listener.(*net.TCPListener)})
+	return s.httpServer.Serve(tunedListener)
+}
+
+// tunedListener sets TCP socket options for max performance
+type tunedListener struct {
+	net.Listener
+}
+
+func (l *tunedListener) Accept() (net.Conn, error) {
+	c, err := l.Listener.Accept()
+	if err != nil {
+		return nil, err
+	}
+	// Set big buffers (4MB) for LAN speeds > 100MB/s
+	if tc, ok := c.(*net.TCPConn); ok {
+		_ = tc.SetReadBuffer(4 * 1024 * 1024)
+		_ = tc.SetWriteBuffer(4 * 1024 * 1024)
+		_ = tc.SetNoDelay(true)
+	}
+	return c, nil
 }
 
 func (s *Server) Shutdown(ctx context.Context) error {
