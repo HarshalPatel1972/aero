@@ -73,6 +73,9 @@ type Server struct {
 	tempDir          string
 	ctx              context.Context // Wails context for event emission
 
+	// Term-Phase 5: Multi-peer hub
+	hub *Hub
+
 	// Connected phone clients
 	clients   map[string]*PhoneClient
 	clientsMu sync.RWMutex
@@ -111,6 +114,7 @@ func NewServerWithKey(cfg config.Config, storageService storage.Service, key []b
 		onTransfer:       onTransfer,
 		tempDir:          tempDir,
 		clients:          make(map[string]*PhoneClient),
+		hub:              NewHub(), // Term-Phase 5: Initialize hub
 	}
 
 	mux := http.NewServeMux()
@@ -119,6 +123,10 @@ func NewServerWithKey(cfg config.Config, storageService storage.Service, key []b
 	mux.HandleFunc("/stream", s.handleStreamUpload) // Term-Phase 3: pooled buffer handler
 	mux.HandleFunc("/transfer", s.handleTransfer)
 	mux.HandleFunc("/health", s.handleHealth)
+	// Term-Phase 5: Hub routes
+	mux.HandleFunc("/hub", s.handleHubWebSocket)
+	mux.HandleFunc("/relay", s.handleRelay)
+	mux.HandleFunc("/download/", s.handleRelayDownload)
 
 	s.httpServer = &http.Server{
 		Addr:         ":" + cfg.Port,
