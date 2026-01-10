@@ -2,14 +2,17 @@
 // handler.go: High-performance HTTP upload handler
 //
 // Term-Phase 3 & 4: Uses buffer pool, bandwidth tracker, and state manager.
+// Speed Branch: Buffered disk I/O for 20+ MB/s throughput.
 // Features:
 //   - Context cancellation for "Panic Button" functionality
 //   - Partial file cleanup on cancel
 //   - Collision-safe filename resolution
+//   - Buffered disk writes (256KB) for reduced syscalls
 
 package server
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"io"
@@ -111,8 +114,13 @@ func handleStreamUploadWithState(
 		return
 	}
 
+	// Wrap with buffered writer for faster disk I/O (256KB buffer)
+	// This batches multiple small writes into larger disk operations
+	bufferedWriter := bufio.NewWriterSize(partFile, BufferSize)
+
 	// Cleanup on any exit
 	defer func() {
+		bufferedWriter.Flush() // Flush remaining data
 		partFile.Close()
 		if !transferSuccess {
 			// Delete partial file on failure/cancel
@@ -149,8 +157,8 @@ func handleStreamUploadWithState(
 		// ── READ ────────────────────────────────────────────────
 		n, readErr := tracker.Read(*buf)
 		if n > 0 {
-			// ── WRITE ───────────────────────────────────────────
-			nw, writeErr := partFile.Write((*buf)[:n])
+			// ── WRITE (buffered) ────────────────────────────────
+			nw, writeErr := bufferedWriter.Write((*buf)[:n])
 			if nw > 0 {
 				written += int64(nw)
 			}
@@ -174,10 +182,11 @@ func handleStreamUploadWithState(
 	}
 
 	// ═══════════════════════════════════════════════════════════
-	// FINALIZE: Rename .part to final name
+	// FINALIZE: Flush buffer, close file, rename .part to final name
 	// ═══════════════════════════════════════════════════════════
 
-	partFile.Close() // Close before rename (required on Windows)
+	bufferedWriter.Flush() // Ensure all data written
+	partFile.Close()       // Close before rename (required on Windows)
 
 	if err := os.Rename(partPath, finalPath); err != nil {
 		log.Printf("[AERO] ❌ Rename failed: %v", err)
