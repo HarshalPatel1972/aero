@@ -66,6 +66,15 @@ func NewTransferTracker(
 // Read implements io.Reader with bandwidth tracking.
 // Uses atomic operations for zero-lock performance.
 func (t *TransferTracker) Read(p []byte) (n int, err error) {
+	// Check context cancellation (non-blocking)
+	if t.ctx != nil {
+		select {
+		case <-t.ctx.Done():
+			return 0, t.ctx.Err()
+		default:
+		}
+	}
+
 	n, err = t.reader.Read(p)
 	if n > 0 {
 		// Atomic add to bytes counter

@@ -276,34 +276,17 @@ func (s *Server) handleStreamUpload(w http.ResponseWriter, r *http.Request) {
 		writer.Close()
 	}()
 
-	// Copy using pooled buffer - ZERO ALLOCATION
+	// Use io.CopyBuffer for optimized kernel-space copying (if available)
+	// bufferPool (1MB) ensures large contiguous writes
 	buf := GetBuffer()
 	defer PutBuffer(buf)
 
-	var written int64
-	for {
-		n, readErr := tracker.Read(*buf)
-		if n > 0 {
-			nw, writeErr := bufWriter.Write((*buf)[:n])
-			if nw > 0 {
-				written += int64(nw)
-			}
-			if writeErr != nil {
-				log.Printf("[AERO] ❌ Write error: %v", writeErr)
-				http.Error(w, "Write error", http.StatusInternalServerError)
-				tracker.EmitError()
-				return
-			}
-		}
-		if readErr == io.EOF {
-			break
-		}
-		if readErr != nil {
-			log.Printf("[AERO] ❌ Read error: %v", readErr)
-			http.Error(w, "Read error", http.StatusInternalServerError)
-			tracker.EmitError()
-			return
-		}
+	written, err := io.CopyBuffer(bufWriter, tracker, *buf)
+	if err != nil {
+		log.Printf("[AERO] ❌ Transfer error: %v", err)
+		// Try to send error response, though connection might be broken
+		tracker.EmitError()
+		return
 	}
 
 	// Success

@@ -350,7 +350,10 @@ function TransferItem({ transfer }: { transfer: Transfer }) {
         ${isSend ? 'bg-blue-500/15 text-blue-400' : 'bg-aero-cyan/15 text-aero-cyan'}
       `}>
         {isSend ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownLeft className="w-3 h-3" />}
-        {isSend ? 'Sent' : 'Received'}
+        {transfer.status === 'completed' 
+          ? (isSend ? 'Sent' : 'Received')
+          : (isSend ? 'Sending...' : 'Receiving...')
+        }
       </div>
     </div>
   );

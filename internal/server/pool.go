@@ -11,8 +11,8 @@ import (
 )
 
 // BufferSize is the standard chunk size for transfers.
-// 256KB is optimal for fast LAN transfers (reduces syscalls).
-const BufferSize = 256 * 1024 // 256KB (was 32KB)
+// 1MB is optimal for very fast LAN transfers (Gigabit+).
+const BufferSize = 1024 * 1024 // 1MB (was 256KB)
 
 // bufferPool is a global pool of reusable byte slices.
 // This eliminates GC pressure from constant allocations in the hot path.

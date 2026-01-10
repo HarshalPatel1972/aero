@@ -163,34 +163,12 @@ func (s *Server) StartWithContext(ctx context.Context, ip string) error {
 		return err
 	}
 
-	// 🚀 SPEED: Wrap listener to tune TCP buffers for high-speed LAN
-	tunedListener := &tunedListener{Listener: listener}
-
 	go func() {
 		<-ctx.Done()
 		s.httpServer.Close()
 	}()
 
-	return s.httpServer.Serve(tunedListener)
-}
-
-// tunedListener sets TCP socket options for max performance
-type tunedListener struct {
-	net.Listener
-}
-
-func (l *tunedListener) Accept() (net.Conn, error) {
-	c, err := l.Listener.Accept()
-	if err != nil {
-		return nil, err
-	}
-	// Set big buffers (4MB) for LAN speeds > 100MB/s
-	if tc, ok := c.(*net.TCPConn); ok {
-		_ = tc.SetReadBuffer(4 * 1024 * 1024)
-		_ = tc.SetWriteBuffer(4 * 1024 * 1024)
-		_ = tc.SetNoDelay(true)
-	}
-	return c, nil
+	return s.httpServer.Serve(listener)
 }
 
 func (s *Server) Shutdown(ctx context.Context) error {
