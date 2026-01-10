@@ -144,7 +144,7 @@ export const ActivePanel = memo(function ActivePanel({
           <div className="min-w-0">
             <p className="text-xs font-medium text-white truncate">{filename}</p>
             <p className="text-[10px] text-white/40">
-              {direction === 'send' ? 'Sending' : 'Receiving'}
+              {direction === 'send' ? 'Sending...' : 'Receiving...'}
             </p>
           </div>
         </div>

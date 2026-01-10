@@ -143,9 +143,34 @@ func NewServerWithKey(cfg config.Config, storageService storage.Service, key []b
 	return s, nil
 }
 
+// Custom listener for setting TCP buffer sizes
+type tcpKeepAliveListener struct {
+	*net.TCPListener
+}
+
+func (ln tcpKeepAliveListener) Accept() (net.Conn, error) {
+	tc, err := ln.AcceptTCP()
+	if err != nil {
+		return nil, err
+	}
+	tc.SetKeepAlive(true)
+	tc.SetKeepAlivePeriod(3 * time.Minute)
+	
+	// SPEED OPTIMIZATION: 4MB TCP Buffers
+	// This prevents window-full stalls on high-latency WiFi
+	tc.SetReadBuffer(4 * 1024 * 1024)
+	tc.SetWriteBuffer(4 * 1024 * 1024)
+	
+	return tc, nil
+}
+
 func (s *Server) Start() error {
 	log.Printf("[AERO] Server starting on port %s", s.config.Port)
-	return s.httpServer.ListenAndServe()
+	listener, err := net.Listen("tcp", ":"+s.config.Port)
+	if err != nil {
+		return err
+	}
+	return s.httpServer.Serve(tcpKeepAliveListener{listener.(*net.TCPListener)})
 }
 
 func (s *Server) SetWailsContext(ctx context.Context) {
@@ -168,7 +193,8 @@ func (s *Server) StartWithContext(ctx context.Context, ip string) error {
 		s.httpServer.Close()
 	}()
 
-	return s.httpServer.Serve(listener)
+	// Use custom listener for 4MB TCP buffers
+	return s.httpServer.Serve(tcpKeepAliveListener{listener.(*net.TCPListener)})
 }
 
 func (s *Server) Shutdown(ctx context.Context) error {
