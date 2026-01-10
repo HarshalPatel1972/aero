@@ -779,7 +779,9 @@
                     }
 
                     // All chunks uploaded successfully
-                    transferComplete(file.name, true);
+                    const totalTime = (Date.now() - startTime) / 1000;
+                    const avgSpeed = totalSize / totalTime;
+                    transferComplete(file.name, true, totalSize, totalTime, avgSpeed);
 
                 } catch (error) {
                     console.error('Parallel upload failed:', error);
@@ -787,10 +789,24 @@
                 }
             }
 
-            function transferComplete(name, success) {
+            function transferComplete(name, success, totalBytes, totalTime, avgSpeed) {
                 activeXHR = null; // Clear reference
                 mainTitle.textContent = success ? 'Transfer Complete!' : 'Transfer Failed';
-                transferStatus.textContent = success ? 'Sent successfully' : 'Error occurred';
+
+                // Show detailed stats on success
+                if (success && totalBytes && totalTime) {
+                    const sizeMB = (totalBytes / (1024 * 1024)).toFixed(2);
+                    const speedMBps = (avgSpeed / (1024 * 1024)).toFixed(2);
+                    const timeSec = totalTime.toFixed(2);
+
+                    transferStatus.textContent = `${sizeMB} MB in ${timeSec}s @ ${speedMBps} MB/s`;
+                    console.log(`[STATS] 📊 ${name}: ${sizeMB} MB | ${timeSec}s | ${speedMBps} MB/s`);
+                } else if (success) {
+                    transferStatus.textContent = 'Sent successfully';
+                } else {
+                    transferStatus.textContent = 'Error occurred';
+                }
+
                 progressFill.style.width = '100%';
                 progressStat.textContent = '100%';
 
@@ -803,7 +819,7 @@
                     selectBtn.style.display = 'flex';
                     mainTitle.textContent = 'Send Files to PC';
                     progressFill.style.width = '0%';
-                }, 2000);
+                }, 3000); // Extended to 3s to read stats
             }
 
             function addRecentFile(name, type) {
