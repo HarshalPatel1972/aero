@@ -137,21 +137,25 @@ func handleStreamUploadWithState(
 	defer PutBuffer(buf)
 
 	var written int64
+	var checkCounter int64 // For periodic cancellation checks
+	const checkInterval = 1024 * 1024 // Check cancellation every 1MB
+
 	tracker := NewTransferTracker(ctx, r.Body, totalSize, finalFilename, "receive")
 	tracker.EmitStart()
 
 	for {
-		// ── CHECK CANCELLATION ──────────────────────────────────
-		// This is the "Panic Button" check. If CancelTransfer() was called,
-		// transferCtx.Done() will be closed and we exit immediately.
-		select {
-		case <-transferCtx.Done():
-			log.Printf("[AERO] ⚠️ Transfer cancelled: %s", finalFilename)
-			tracker.EmitError()
-			http.Error(w, "Transfer cancelled", http.StatusRequestTimeout)
-			return
-		default:
-			// Continue with I/O
+		// ── CHECK CANCELLATION (every 1MB to reduce overhead) ───
+		// This is the "Panic Button" check. At 20 MB/s, 1MB = 50ms latency.
+		if written-checkCounter >= checkInterval {
+			checkCounter = written
+			select {
+			case <-transferCtx.Done():
+				log.Printf("[AERO] ⚠️ Transfer cancelled: %s", finalFilename)
+				tracker.EmitError()
+				http.Error(w, "Transfer cancelled", http.StatusRequestTimeout)
+				return
+			default:
+			}
 		}
 
 		// ── READ ────────────────────────────────────────────────
