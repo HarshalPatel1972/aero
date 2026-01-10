@@ -1,20 +1,27 @@
 {
   "$schema": "https://wails.io/schemas/config.v2.json",
   "name": "aero",
-  "outputfilename": "AERO",
+  "outputfilename": "Aero",
   "frontend:install": "npm install",
   "frontend:build": "npm run build",
   "frontend:dev:watcher": "npm run dev",
   "frontend:dev:serverUrl": "auto",
+  "wailsjsdir": "./frontend/src/lib/wails",
+  "assetdir": "./frontend/dist",
+  "reloaddirs": "./internal",
   "author": {
     "name": "Project AERO Contributors",
     "email": "aero@example.com"
   },
   "info": {
-    "companyName": "AERO",
-    "productName": "AERO File Transfer",
+    "companyName": "AERO Project",
+    "productName": "Aero",
     "productVersion": "1.0.0",
-    "copyright": "Copyright © 2026 Project AERO Contributors",
-    "comments": "Secure LAN File Transfer"
-  }
+    "copyright": "© 2026 Aero Project",
+    "comments": "High-Speed Local File Transfer",
+    "fileDescription": "Aero - Secure LAN File Transfer"
+  },
+  "nsisType": "multiple",
+  "obfuscated": false,
+  "garbleargs": ""
 }
