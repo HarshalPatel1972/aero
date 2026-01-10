@@ -23,6 +23,7 @@ export interface TransferState {
   eta: number; // seconds remaining
   startTime: number;
   direction: 'send' | 'receive';
+  onCancel?: () => void; // Cancel callback
 }
 
 const HISTORY_LENGTH = 30;
@@ -166,6 +167,24 @@ export function useTransfer() {
   }, []);
 
   /**
+   * Cancel active transfer
+   */
+  const cancelTransfer = useCallback(() => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    simulationRef.current = null;
+    setState(prev => ({
+      ...prev,
+      active: false,
+      progress: 0,
+      speed: 0,
+      eta: 0,
+    }));
+  }, []);
+
+  /**
    * Reset state
    */
   const reset = useCallback(() => {
@@ -265,11 +284,18 @@ export function useTransfer() {
     };
   }, []);
 
+  // Create state with cancel callback attached
+  const stateWithCancel: TransferState = {
+    ...state,
+    onCancel: state.active ? cancelTransfer : undefined,
+  };
+
   return {
-    state,
+    state: stateWithCancel,
     startTransfer,
     updateProgress,
     completeTransfer,
+    cancelTransfer,
     reset,
     simulateTransfer,
     formatBytes,

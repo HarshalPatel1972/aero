@@ -40,7 +40,7 @@
             flex-direction: column;
             height: 100%;
             padding: 16px;
-            padding-top: env(safe-area-inset-top, 16px);
+            padding-top: calc(env(safe-area-inset-top, 16px) + 24px);
             padding-bottom: env(safe-area-inset-bottom, 16px);
         }
 
@@ -239,6 +239,29 @@
             animation: pulse 1s infinite;
         }
 
+        .cancel-btn {
+            padding: 6px 12px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .cancel-btn:hover {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: rgba(239, 68, 68, 0.5);
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
         /* Progress Bar */
         .progress-bar {
             height: 6px;
@@ -401,7 +424,10 @@
                             <div class="transfer-status" id="transferStatus">Sending...</div>
                         </div>
                     </div>
-                    <div class="live-badge">Live</div>
+                    <div class="header-actions">
+                        <button class="cancel-btn" id="cancelBtn">Cancel</button>
+                        <div class="live-badge">Live</div>
+                    </div>
                 </div>
                 <div class="progress-bar">
                     <div class="progress-fill" id="progressFill" style="width: 0%"></div>
@@ -457,12 +483,14 @@
             const etaStat = document.getElementById('etaStat');
             const recentsDiv = document.getElementById('recents');
             const mainTitle = document.getElementById('mainTitle');
+            const cancelBtn = document.getElementById('cancelBtn');
 
             // State
             let recentFiles = [];
             let cryptoKey = null;
             let encryptionEnabled = false;
             let sessionIV = null;
+            let activeXHR = null; // For cancel functionality
 
             // Crypto functions
             function extractKeyFromHash() {
@@ -515,6 +543,28 @@
                 fileInput.value = '';
             });
 
+            // Cancel button
+            cancelBtn.addEventListener('click', () => {
+                if (activeXHR) {
+                    activeXHR.abort();
+                    activeXHR = null;
+                    transferCancelled();
+                }
+            });
+
+            function transferCancelled() {
+                mainTitle.textContent = 'Cancelled';
+                transferStatus.textContent = 'Transfer cancelled';
+                haptics.error();
+
+                setTimeout(() => {
+                    transferPanel.classList.remove('active');
+                    selectBtn.style.display = 'flex';
+                    mainTitle.textContent = 'Send Files to PC';
+                    progressFill.style.width = '0%';
+                }, 1500);
+            }
+
             // Upload file
             async function uploadFile(file) {
                 mainTitle.textContent = 'Sending...';
@@ -534,6 +584,7 @@
                     formData.append('file', file);
 
                     const xhr = new XMLHttpRequest();
+                    activeXHR = xhr; // Store reference for cancel
                     xhr.open('POST', '/upload', true);
 
                     xhr.upload.onprogress = (e) => {
@@ -578,6 +629,7 @@
             }
 
             function transferComplete(name, success) {
+                activeXHR = null; // Clear reference
                 mainTitle.textContent = success ? 'Transfer Complete!' : 'Transfer Failed';
                 transferStatus.textContent = success ? 'Sent successfully' : 'Error occurred';
                 progressFill.style.width = '100%';

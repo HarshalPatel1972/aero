@@ -149,10 +149,27 @@ export const ActivePanel = memo(function ActivePanel({
           </div>
         </div>
         
-        {/* Live indicator */}
-        <div className="flex items-center gap-1">
-          <div className="w-1.5 h-1.5 rounded-full bg-aero-cyan animate-pulse" />
-          <span className="text-[10px] font-medium text-aero-cyan uppercase tracking-wider">Live</span>
+        {/* Cancel + Live indicator */}
+        <div className="flex items-center gap-2">
+          {transfer.onCancel && (
+            <button
+              onClick={transfer.onCancel}
+              className="
+                px-2 py-1 text-[10px] font-medium
+                text-red-400 hover:text-red-300
+                bg-red-500/10 hover:bg-red-500/20
+                border border-red-500/30 rounded-md
+                transition-all duration-200
+                active:scale-95 transform-gpu
+              "
+            >
+              Cancel
+            </button>
+          )}
+          <div className="flex items-center gap-1">
+            <div className="w-1.5 h-1.5 rounded-full bg-aero-cyan animate-pulse" />
+            <span className="text-[10px] font-medium text-aero-cyan uppercase tracking-wider">Live</span>
+          </div>
         </div>
       </div>
 
