@@ -28,6 +28,7 @@ import {
 import type { NetworkInterface, ServerStatus, TransferEvent } from './types';
 import { useTransfer } from './hooks/useTransfer';
 import { ActivePanel } from './components/Transfer/ActivePanel';
+import { CompactView } from './components/CompactView';
 
 // ═══════════════════════════════════════════════════════════════
 // AERO LOGO COMPONENT
@@ -95,12 +96,13 @@ const playCompletionSound = () => {
 // CUSTOM TITLEBAR
 // ═══════════════════════════════════════════════════════════════
 
-function TitleBar() {
-  const [isAlwaysOnTop, setIsAlwaysOnTop] = useState(false);
-
+function TitleBar({ isAlwaysOnTop, onToggleAlwaysOnTop }: { 
+  isAlwaysOnTop: boolean;
+  onToggleAlwaysOnTop: (state: boolean) => void;
+}) {
   const toggleAlwaysOnTop = () => {
     const newState = !isAlwaysOnTop;
-    setIsAlwaysOnTop(newState);
+    onToggleAlwaysOnTop(newState);
     
     // Call Wails runtime to set always on top
     if (window.runtime?.WindowSetAlwaysOnTop) {
@@ -478,6 +480,8 @@ function App() {
   const [transfers, setTransfers] = useState<Transfer[]>([]);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [isCompactMode, setIsCompactMode] = useState(false);
+  const [isAlwaysOnTop, setIsAlwaysOnTop] = useState(false);
   
   // Term-Phase 2: Transfer HUD state
   const { state: activeTransfer, simulateTransfer } = useTransfer();
@@ -573,6 +577,44 @@ function App() {
     // Future: handle dropped files
   };
 
+  // Compact Mode: Window focus detection
+  useEffect(() => {
+    if (!isAlwaysOnTop) {
+      // Restore to full size if always-on-top is disabled
+      if (isCompactMode) {
+        setIsCompactMode(false);
+        window.runtime?.WindowSetSize(1050, 670);
+        window.runtime?.WindowCenter();
+      }
+      return;
+    }
+
+    const handleBlur = () => {
+      setIsCompactMode(true);
+      // Resize to compact strip
+      window.runtime?.WindowSetSize(200, 60);
+      // Position at bottom-right
+      const x = window.screen.width - 220; // 200px width + 20px margin
+      const y = window.screen.height - 100; // 60px height + 40px margin
+      window.runtime?.WindowSetPosition(x, y);
+    };
+
+    const handleFocus = () => {
+      setIsCompactMode(false);
+      // Restore original size
+      window.runtime?.WindowSetSize(1050, 670);
+      window.runtime?.WindowCenter();
+    };
+
+    window.addEventListener('blur', handleBlur);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      window.removeEventListener('blur', handleBlur);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [isAlwaysOnTop, isCompactMode]);
+
   return (
     <div 
       onDragOver={handleDragOver}
@@ -588,7 +630,18 @@ function App() {
           : 'border-void-border'}
       `}
     >
-      <TitleBar />
+      {/* Compact Mode View */}
+      {isCompactMode ? (
+        <CompactView 
+          serverStatus={serverStatus || { running: false, url: '', qrCode: '' }}
+          onExpand={() => window.focus()}
+        />
+      ) : (
+        <>
+          <TitleBar 
+            isAlwaysOnTop={isAlwaysOnTop}
+            onToggleAlwaysOnTop={setIsAlwaysOnTop}
+          />
 
       <div className="flex-1 flex flex-col px-5 py-5 gap-6 overflow-hidden">
         {/* Network Selector */}
@@ -620,12 +673,14 @@ function App() {
         <RecentFilesZone transfers={transfers} />
       </div>
 
-      <StatusBar
-        active={isActive}
-        soundEnabled={soundEnabled}
-        onOpenFolder={handleOpenFolder}
-        onToggleSound={() => setSoundEnabled(!soundEnabled)}
-      />
+        <StatusBar
+          active={isActive}
+          soundEnabled={soundEnabled}
+          onOpenFolder={handleOpenFolder}
+          onToggleSound={() => setSoundEnabled(!soundEnabled)}
+        />
+      </>
+      )}
     </div>
   );
 }

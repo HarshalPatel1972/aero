@@ -29,6 +29,9 @@ declare global {
       WindowMinimise: () => void;
       WindowClose: () => void;
       WindowSetAlwaysOnTop: (alwaysOnTop: boolean) => void;
+      WindowSetSize: (width: number, height: number) => void;
+      WindowSetPosition: (x: number, y: number) => void;
+      WindowCenter: () => void;
       Quit: () => void;
     };
     go: {
