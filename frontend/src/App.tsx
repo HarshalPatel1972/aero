@@ -577,7 +577,7 @@ function App() {
     // Future: handle dropped files
   };
 
-  // Compact Mode: Window focus detection
+  // Compact Mode: Window focus detection with smooth transitions
   useEffect(() => {
     if (!isAlwaysOnTop) {
       // Restore to full size if always-on-top is disabled
@@ -589,21 +589,57 @@ function App() {
       return;
     }
 
-    const handleBlur = () => {
+    const handleBlur = async () => {
+      // 1. CSS pre-animation for smoothness
+      const root = document.documentElement;
+      root.style.transition = 'transform 300ms ease-out, opacity 300ms ease-out';
+      root.style.transform = 'scale(0.95)';
+      root.style.opacity = '0.8';
+
+      // 2. Wait for animation
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      // 3. Resize and reposition window
       setIsCompactMode(true);
-      // Resize to compact strip
-      window.runtime?.WindowSetSize(200, 60);
-      // Position at bottom-right
-      const x = window.screen.width - 220; // 200px width + 20px margin
-      const y = window.screen.height - 100; // 60px height + 40px margin
+      window.runtime?.WindowSetSize(400, 80); // Horizontal strip
+      
+      // Position above taskbar
+      const taskbarHeight = 48; // Windows taskbar
+      const stripWidth = 400;
+      const stripHeight = 80;
+      const margin = 10;
+      const x = window.screen.width - stripWidth - margin;
+      const y = window.screen.height - taskbarHeight - stripHeight - margin;
       window.runtime?.WindowSetPosition(x, y);
+
+      // 4. Reset CSS after resize
+      await new Promise(resolve => setTimeout(resolve, 50));
+      root.style.transform = 'scale(1)';
+      root.style.opacity = '1';
+      setTimeout(() => {
+        root.style.transition = '';
+      }, 300);
     };
 
-    const handleFocus = () => {
+    const handleFocus = async () => {
+      // Smooth expand animation
+      const root = document.documentElement;
+      root.style.transition = 'transform 300ms ease-out, opacity 300ms ease-out';
+      root.style.transform = 'scale(1.05)';
+      root.style.opacity = '0.8';
+
+      await new Promise(resolve => setTimeout(resolve, 300));
+
       setIsCompactMode(false);
-      // Restore original size
       window.runtime?.WindowSetSize(1050, 670);
       window.runtime?.WindowCenter();
+
+      await new Promise(resolve => setTimeout(resolve, 50));
+      root.style.transform = 'scale(1)';
+      root.style.opacity = '1';
+      setTimeout(() => {
+        root.style.transition = '';
+      }, 300);
     };
 
     window.addEventListener('blur', handleBlur);
@@ -635,6 +671,7 @@ function App() {
         <CompactView 
           serverStatus={serverStatus || { running: false, url: '', ip: '', port: '' }}
           onExpand={() => window.focus()}
+          onTogglePower={handleToggle}
         />
       ) : (
         <>
