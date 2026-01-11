@@ -23,6 +23,7 @@ import {
   Send,
   ArrowUpRight,
   ArrowDownLeft,
+  Zap,
 } from 'lucide-react';
 import type { NetworkInterface, ServerStatus, TransferEvent } from './types';
 import { useTransfer } from './hooks/useTransfer';
@@ -95,12 +96,41 @@ const playCompletionSound = () => {
 // ═══════════════════════════════════════════════════════════════
 
 function TitleBar() {
+  const [isAlwaysOnTop, setIsAlwaysOnTop] = useState(false);
+
+  const toggleAlwaysOnTop = () => {
+    const newState = !isAlwaysOnTop;
+    setIsAlwaysOnTop(newState);
+    
+    // Call Wails runtime to set always on top
+    if (window.runtime?.WindowSetAlwaysOnTop) {
+      window.runtime.WindowSetAlwaysOnTop(newState);
+    }
+  };
+
   return (
     <div className="wails-drag h-11 flex items-center justify-between px-4 
       bg-void-surface/80 backdrop-blur-glass border-b border-white/5">
       <div className="flex items-center gap-2.5">
         <AeroLogo className="w-5 h-5" />
         <span className="text-sm font-semibold text-white/90 tracking-tight">Aero</span>
+        
+        {/* Always On Top Button */}
+        <button
+          onClick={toggleAlwaysOnTop}
+          className="wails-no-drag p-1.5 rounded-lg hover:bg-white/5 transition-all duration-200 
+            active:scale-95 transform-gpu group relative"
+          aria-label="Always on top"
+          title="Always on top"
+        >
+          <Zap 
+            className={`w-3.5 h-3.5 transition-all duration-200 ${
+              isAlwaysOnTop 
+                ? 'text-cyan-400 fill-cyan-400' 
+                : 'text-white/20 group-hover:text-white/40'
+            }`} 
+          />
+        </button>
       </div>
       
       <div className="wails-no-drag flex items-center gap-0.5">
