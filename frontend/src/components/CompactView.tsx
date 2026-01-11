@@ -3,7 +3,7 @@
  * Horizontal strip with external-looking controls on left
  */
 
-import { Power, Maximize2, GripVertical } from 'lucide-react';
+import { Power, Maximize2 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import type { ServerStatus } from '../types';
 
@@ -18,20 +18,24 @@ export function CompactView({ serverStatus, onExpand, onTogglePower }: CompactVi
 
   return (
     <div className="h-full w-full flex items-stretch">
-      {/* Left Control Strip - looks external */}
-      <div className="w-12 bg-gray-900/95 border-r border-white/20 flex flex-col items-center justify-between py-4">
-        {/* Drag Handle */}
+      {/* Left Control Strip */}
+      <div className="w-10 bg-black/90 border-r border-white/10 flex flex-col items-center justify-between py-3">
+        {/* Drag Handle - 6 dots grid */}
         <div className="wails-drag flex-1 flex items-center justify-center cursor-move">
-          <GripVertical className="w-5 h-5 text-white/40" />
+          <div className="grid grid-cols-2 gap-1">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="w-1 h-1 rounded-full bg-white/30" />
+            ))}
+          </div>
         </div>
         
         {/* Maximize Button */}
         <button
           onClick={onExpand}
-          className="wails-no-drag p-2 rounded-lg hover:bg-white/10 transition-all"
-          title="Expand to full view"
+          className="wails-no-drag p-1.5 rounded hover:bg-white/5 transition-all"
+          title="Expand"
         >
-          <Maximize2 className="w-5 h-5 text-white/60 hover:text-cyan-400" />
+          <Maximize2 className="w-4 h-4 text-white/50" />
         </button>
       </div>
 
