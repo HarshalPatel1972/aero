@@ -339,8 +339,8 @@ func (a *App) ToggleMiniMode(isMini bool) {
 		// Calculate Position: Bottom-Right
 		// Fallback to hardcoded 1080p bottom-right due to Wails struct API mismatch
 		// TODO: Fix screen API access for multi-monitor support
-		width := 600
-		height := 120
+		width = 600
+		height = 120
 		
 		// Assume 1080p primary monitor
 		screenWidth := 1920
