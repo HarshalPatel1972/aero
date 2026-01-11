@@ -343,15 +343,24 @@ func (a *App) SetMiniMode(enabled bool) {
 		if screenWidth == 0 { screenWidth = 1920 }
 		if screenHeight == 0 { screenHeight = 1080 }
 
-		// Calculating Bottom-Right Dock position
+
+		// Calculate Position: Bottom-Right Dock position
 		// X = ScreenWidth - WindowWidth
 		// Y = ScreenHeight - WindowHeight - Taskbar(40)
 		x := screenX + screenWidth - width - 20
 		y := screenY + screenHeight - height - 60 
 
+		// ROBUSTNESS: Explicitly set size BEFORE position, then again after to ensure it sticks.
+		// Wails/Windows sometimes ignores resize if moved simultaneously.
 		wailsruntime.WindowSetSize(a.ctx, width, height)
 		wailsruntime.WindowSetPosition(a.ctx, x, y)
 		wailsruntime.WindowSetAlwaysOnTop(a.ctx, true)
+		
+		// "Double-tap" resize to force layout update if OS animation interfered
+		go func() {
+			goruntime.Gosched() // Yield
+			wailsruntime.WindowSetSize(a.ctx, width, height)
+		}()
 		
 	} else {
 		// STANDARD MODE SPEC: 400x700 Centered
