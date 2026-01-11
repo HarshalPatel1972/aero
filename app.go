@@ -328,27 +328,19 @@ func (a *App) SetMiniMode(enabled bool) {
 		width := 600
 		height := 120
 
-		// Use WorkArea or Bounds to position
-		// Note: Accessing fields available in this Wails version
-		// If WorkArea is unavailable compile-time, we use Bounds/Size with manual taskbar offset
+		// Use WorkArea to position (Respects Taskbar)
+		// Rect struct usually has X, Y, Width, Height
+		workArea := primary.WorkArea
 		
-		// Strategy: Try to be as precise as possible with available structs
-		// Assuming Wails V2 standard Structs: Size {Width, Height}, X, Y
-		
-		screenWidth := primary.Size.Width
-		screenHeight := primary.Size.Height
-		screenX := primary.X
-		screenY := primary.Y
-
-		if screenWidth == 0 { screenWidth = 1920 }
-		if screenHeight == 0 { screenHeight = 1080 }
-
+		// If WorkArea is zero (unlikely on modern Wails), fallback to Bounds
+		if workArea.Width == 0 || workArea.Height == 0 {
+			workArea = primary.Bounds
+		}
 
 		// Calculate Position: Bottom-Right Dock position
-		// X = ScreenWidth - WindowWidth
-		// Y = ScreenHeight - WindowHeight - Taskbar(40)
-		x := screenX + screenWidth - width - 20
-		y := screenY + screenHeight - height - 60 
+		// Strict docking to the WorkArea edges
+		x := workArea.X + workArea.Width - width
+		y := workArea.Y + workArea.Height - height
 
 		// ROBUSTNESS: Explicitly set size BEFORE position, then again after to ensure it sticks.
 		// Wails/Windows sometimes ignores resize if moved simultaneously.
