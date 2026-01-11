@@ -36,38 +36,39 @@ export function CompactView({ serverStatus, onExpand, onTogglePower }: CompactVi
       </div>
 
       {/* Main Horizontal Content */}
-      <div className="flex-1 flex items-center justify-center gap-8 px-8 bg-void-surface/95">
+      <div className="flex-1 flex items-center gap-6 px-6 bg-void-surface/95">
         {/* QR Code */}
-        <div className={`p-3 rounded-xl bg-white transition-all duration-300 ${
+        <div className={`p-2 rounded-lg bg-gray-700/50 transition-all duration-300 ${
           isActive ? 'shadow-glow-cyan' : 'opacity-50'
         }`}>
           <QRCodeSVG 
             value={serverStatus.url || 'https://aero.app'} 
-            size={80}
+            size={70}
             level="M"
             bgColor="transparent"
-            fgColor={isActive ? '#050505' : '#666666'}
+            fgColor="#E5E7EB"
           />
         </div>
 
         {/* Power Button */}
         <button
           onClick={onTogglePower}
-          className="wails-no-drag group relative p-4 rounded-xl transition-all duration-300
-            hover:scale-105 active:scale-95 transform-gpu"
+          className="wails-no-drag group relative p-3 rounded-full transition-all duration-300
+            hover:scale-105 active:scale-95 transform-gpu bg-gray-800/50 border border-white/10"
           aria-label={isActive ? 'Stop Server' : 'Start Server'}
         >
-          <div className={`absolute inset-0 rounded-xl blur-xl transition-all duration-300 ${
+          <Power className={`w-6 h-6 transition-all duration-300 ${
             isActive 
-              ? 'bg-aero-cyan/40 group-hover:bg-aero-cyan/60' 
-              : 'bg-white/5 group-hover:bg-white/10'
-          }`} />
-          <Power className={`relative w-8 h-8 transition-all duration-300 ${
-            isActive 
-              ? 'text-aero-cyan drop-shadow-glow-cyan' 
-              : 'text-white/40 group-hover:text-white/60'
+              ? 'text-aero-cyan' 
+              : 'text-white/40'
           }`} />
         </button>
+
+        {/* Recent Files Label */}
+        <div className="flex-1" />
+        <span className="text-sm font-medium text-white/40 tracking-wider">
+          RECENT FILES
+        </span>
       </div>
     </div>
   );
