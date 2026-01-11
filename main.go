@@ -43,14 +43,20 @@ func main() {
 		Title:     "Aero",
 		Width:     400,
 		Height:    720,
-		MinWidth:  400,
-		MinHeight: 720,
-		MaxWidth:  400,
-		MaxHeight: 720,
+		
+		// REMOVE Strict constraints to allow Mini Mode (600x120)
+		// MinWidth:  400,
+		// MinHeight: 720,
+		// MaxWidth:  400,
+		// MaxHeight: 720,
 
 		// Frameless for custom title bar
 		Frameless:         true,
-		DisableResize:     true,
+		DisableResize:     false, // Must be false to allow SetSize to work properly in some contexts? 
+		// Actually SetSize works with DisableResize: true usually, but Min/Max definitely block it.
+		// We can keep DisableResize: true if we just remove the Constraints.
+		// Let's remove Min/Max first.
+		
 		StartHidden:       false,
 		HideWindowOnClose: false,
 
