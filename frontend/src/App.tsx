@@ -28,7 +28,7 @@ import {
 import type { NetworkInterface, ServerStatus, TransferEvent } from './types';
 import { useTransfer } from './hooks/useTransfer';
 import { ActivePanel } from './components/Transfer/ActivePanel';
-import { CompactView } from './components/CompactView';
+import { HorizontalDock } from './components/HorizontalDock';
 
 // ═══════════════════════════════════════════════════════════════
 // AERO LOGO COMPONENT
@@ -664,9 +664,9 @@ function App() {
         transition-all duration-300
       `}
     >
-      {/* Compact Mode View */}
+      {/* Mini Mode Dock */}
       {isCompactMode ? (
-        <CompactView 
+        <HorizontalDock 
           serverStatus={serverStatus || { running: false, url: '', ip: '', port: '' }}
           onExpand={() => window.focus()}
           onTogglePower={handleToggle}
