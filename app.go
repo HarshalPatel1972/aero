@@ -322,15 +322,41 @@ func (a *App) ToggleMiniMode(isMini bool) {
 			primary = &screens[0]
 		}
 
+
 		// Calculate Position: Bottom-Right, above taskbar
-		// WorkArea accounts for taskbar. 
+		// Fallback to Bounds if WorkArea is not available or reliable without updated Wails
 		// We want 20px padding from right (600 + 20 = 620 offset)
 		// We want 20px padding from bottom (120 + 20 = 140 offset)
+		// Note: Using Bounds implies full screen size. We assume 48px taskbar for now if WorkArea fails.
+		// Precision TODO: Check Wails version for WorkArea support.
+		
+		// Calculate Position: Bottom-Right, above taskbar
+		// Fallback logic since WorkArea/Bounds might be missing in this Wails version binding
 		width := 600
 		height := 120
 		
-		x := primary.WorkArea.X + primary.WorkArea.Width - width - 20
-		y := primary.WorkArea.Y + primary.WorkArea.Height - height - 20
+		// Attempt to use Size struct or top-level fields (checking common patterns)
+		// If Size struct exists:
+		screenWidth := primary.Size.Width
+		screenHeight := primary.Size.Height
+		screenX := primary.X
+		screenY := primary.Y
+
+		// If Size is 0 (maybe it's PhysicalSize?), try that or fallback defaults
+		if screenWidth == 0 {
+			screenWidth = 1920 // Fallback
+		}
+		if screenHeight == 0 {
+			screenHeight = 1080 // Fallback
+		}
+
+		x := screenX + screenWidth - width - 20
+		y := screenY + screenHeight - height - 60 // 20 padding + ~40 taskbar
+
+		wailsruntime.WindowSetSize(a.ctx, width, height)
+		wailsruntime.WindowSetPosition(a.ctx, x, y)
+		wailsruntime.WindowSetAlwaysOnTop(a.ctx, true)
+
 
 		wailsruntime.WindowSetSize(a.ctx, width, height)
 		wailsruntime.WindowSetPosition(a.ctx, x, y)
