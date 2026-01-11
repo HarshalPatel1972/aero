@@ -24,7 +24,6 @@ import {
   ArrowUpRight,
   ArrowDownLeft,
   Zap,
-  GripVertical,
   Maximize2
 } from 'lucide-react';
 import type { NetworkInterface, ServerStatus, TransferEvent } from './types';
@@ -97,38 +96,36 @@ const playCompletionSound = () => {
 // CUSTOM TITLEBAR (Standard Mode Only)
 // ═══════════════════════════════════════════════════════════════
 
-function TitleBar({ isAlwaysOnTop, onToggleAlwaysOnTop }: { 
-  isAlwaysOnTop: boolean;
-  onToggleAlwaysOnTop: (state: boolean) => void;
-}) {
-  const toggleAlwaysOnTop = () => {
-    const newState = !isAlwaysOnTop;
-    onToggleAlwaysOnTop(newState);
-    
-    // Call Wails runtime to set always on top
-    if (window.runtime?.WindowSetAlwaysOnTop) {
-      window.runtime.WindowSetAlwaysOnTop(newState);
-    }
-  };
+// ═══════════════════════════════════════════════════════════════
+// CUSTOM TITLEBAR (Standard Mode Only)
+// ═══════════════════════════════════════════════════════════════
 
+function TitleBar({ isAutoCompact, onToggleAutoCompact }: { 
+  isAutoCompact: boolean;
+  onToggleAutoCompact: (state: boolean) => void;
+}) {
   return (
-    <div className="wails-drag h-11 flex items-center justify-between px-4 
-      bg-void-surface/80 backdrop-blur-glass border-b border-white/5">
+    <div 
+      style={{ "--wails-draggable": "drag" } as React.CSSProperties}
+      className="h-11 flex items-center justify-between px-4 
+      bg-void-surface/80 backdrop-blur-glass border-b border-white/5"
+    >
       <div className="flex items-center gap-2.5">
         <AeroLogo className="w-5 h-5" />
         <span className="text-sm font-semibold text-white/90 tracking-tight">Aero</span>
         
-        {/* Always On Top Button */}
+        {/* Toggle Auto-Compact Mode Button */}
         <button
-          onClick={toggleAlwaysOnTop}
-          className="wails-no-drag p-1.5 rounded-lg hover:bg-white/5 transition-all duration-200 
+          onClick={() => onToggleAutoCompact(!isAutoCompact)}
+          style={{ "--wails-draggable": "no-drag" } as React.CSSProperties}
+          className="p-1.5 rounded-lg hover:bg-white/5 transition-all duration-200 
             active:scale-95 transform-gpu group relative"
-          aria-label="Always on top"
-          title="Always on top"
+          aria-label="Toggle Auto-Compact Mode"
+          title="Toggle Auto-Compact Mode"
         >
           <Zap 
             className={`w-3.5 h-3.5 transition-all duration-200 ${
-              isAlwaysOnTop 
+              isAutoCompact
                 ? 'text-cyan-400 fill-cyan-400' 
                 : 'text-white/20 group-hover:text-white/40'
             }`} 
@@ -136,9 +133,15 @@ function TitleBar({ isAlwaysOnTop, onToggleAlwaysOnTop }: {
         </button>
       </div>
       
-      <div className="wails-no-drag flex items-center gap-0.5">
+      <div 
+        style={{ "--wails-draggable": "no-drag" } as React.CSSProperties}
+        className="flex items-center gap-0.5"
+      >
         <button
-          onClick={() => window.runtime?.WindowMinimise()}
+          onClick={() => {
+            console.log("TitleBar: Minimize Clicked");
+            window.runtime?.WindowMinimise();
+          }}
           className="p-2 rounded-lg hover:bg-white/5 transition-all duration-200 
             active:scale-95 transform-gpu"
           aria-label="Minimize"
@@ -146,7 +149,10 @@ function TitleBar({ isAlwaysOnTop, onToggleAlwaysOnTop }: {
           <Minus className="w-4 h-4 text-white/40" />
         </button>
         <button
-          onClick={() => window.runtime?.Quit()}
+          onClick={() => {
+            console.log("TitleBar: Quit Clicked");
+            window.runtime?.Quit();
+          }}
           className="p-2 rounded-lg hover:bg-red-500/20 transition-all duration-200 
             group active:scale-95 transform-gpu"
           aria-label="Close"
@@ -164,13 +170,16 @@ function TitleBar({ isAlwaysOnTop, onToggleAlwaysOnTop }: {
 
 function SideHandle({ onRestore }: { onRestore: () => void }) {
   return (
-    <div className="
-      h-full w-12 flex-shrink-0
-      bg-zinc-900/80 border-r border-zinc-800
-      flex flex-col items-center justify-center gap-4
-    ">
-      {/* 1. The Drag Grip - Strictly Isolated Drag Region */}
-      <div className="wails-drag p-2 rounded cursor-grab active:cursor-grabbing hover:bg-white/5 transition-colors">
+    <div 
+      style={{ "--wails-draggable": "drag" } as React.CSSProperties}
+      className="
+        h-full w-12 flex-shrink-0
+        bg-zinc-900/80 border-r border-zinc-800
+        flex flex-col items-center justify-center gap-4
+      "
+    >
+      {/* 1. The Drag Grip - Visually represented, but whole bar is draggable */}
+      <div className="p-2 rounded hover:bg-white/5 transition-colors">
         <div className="grid grid-cols-2 gap-1 opacity-50">
            {/* Custom 6-dot grip pattern */}
            <div className="w-1 h-1 rounded-full bg-white"/>
@@ -182,9 +191,13 @@ function SideHandle({ onRestore }: { onRestore: () => void }) {
         </div>
       </div>
 
-      {/* 2. Restore Button */}
+      {/* 2. Restore Button - Must be NO-DRAG to be clickable */}
       <button 
-        onClick={onRestore}
+        onClick={() => {
+          console.log("SideHandle: Restore Clicked");
+          onRestore();
+        }}
+        style={{ "--wails-draggable": "no-drag" } as React.CSSProperties}
         className="
           p-2 rounded-lg text-zinc-400 
           hover:text-white hover:bg-white/10 
@@ -552,12 +565,33 @@ function App() {
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [isDragOver, setIsDragOver] = useState(false);
   const [isCompactMode, setIsCompactMode] = useState(false);
+  const [isAutoCompact, setIsAutoCompact] = useState(false); // Controls behavior on blur
   const [isAlwaysOnTop, setIsAlwaysOnTop] = useState(false);
   
   // Term-Phase 2: Transfer HUD state
   const { state: activeTransfer, simulateTransfer } = useTransfer();
   
   const transferIdCounter = useRef(0);
+
+  // Focus Handling Logic
+  useEffect(() => {
+    const handleBlur = () => {
+      // Only compact if the toggle is active AND we are currently in standard mode
+      if (isAutoCompact && !isCompactMode) {
+        setMode(true);
+      }
+    };
+    
+    // REMOVED: handleFocus causing auto-expansion on click. 
+    // User wants to interact with Mini Mode without it popping open.
+    // Restoration is now strictly manual via the SideHandle button.
+
+    window.addEventListener('blur', handleBlur);
+    
+    return () => {
+      window.removeEventListener('blur', handleBlur);
+    };
+  }, [isAutoCompact, isCompactMode]);
 
   // Load interfaces
   useEffect(() => {
@@ -650,6 +684,7 @@ function App() {
 
   // Switch Modes
   const setMode = async (enabled: boolean) => {
+    console.log(`[App] setMode called with enabled=${enabled}`);
     // 1. CSS pre-animation
     const root = document.documentElement;
     root.style.transition = 'opacity 300ms ease-out';
@@ -659,10 +694,12 @@ function App() {
     await new Promise(resolve => setTimeout(resolve, 200));
 
     // 3. State update + Backend Call
+    console.log(`[App] Setting isCompactMode=${enabled}`);
     setIsCompactMode(enabled);
     try {
       // @ts-ignore - Wails binding
       await window.go.main.App.SetMiniMode(enabled);
+      console.log(`[App] Backend SetMiniMode(${enabled}) success`);
       
       // If going back to standard, ensure we update always on top state to match backend standard
       if (!enabled) {
@@ -691,6 +728,8 @@ function App() {
   // UNIFIED RENDER
   // ════════════════════════════════════════════════════════════
   
+  const isBigDragOver = !isCompactMode && isDragOver;
+
   // Base classes for the outer container
   // CRITICAL: style={{ "--wails-draggable": "no-drag" }} applied inline
   const containerClasses = `
@@ -701,8 +740,6 @@ function App() {
         : 'h-full flex flex-col bg-void-black rounded-xl border-2'
     }
   `;
-  
-  const isBigDragOver = !isCompactMode && isDragOver;
 
   return (
     <div 
@@ -719,8 +756,8 @@ function App() {
       */}
       {!isCompactMode ? (
         <TitleBar 
-          isAlwaysOnTop={isAlwaysOnTop}
-          onToggleAlwaysOnTop={setIsAlwaysOnTop}
+          isAutoCompact={isAutoCompact}
+          onToggleAutoCompact={setIsAutoCompact}
         />
       ) : (
         <SideHandle onRestore={() => setMode(false)} />
@@ -764,6 +801,8 @@ function App() {
           onToggle={handleToggle}
           onSendToPhone={handleSendToPhone}
         />
+
+
 
         {/* Active Transfer HUD - Standard Only (for now) */}
         {!isCompactMode && (

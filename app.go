@@ -324,46 +324,34 @@ func (a *App) SetMiniMode(enabled bool) {
 
 		// MINI MODE SPEC:
 		// Width: 600, Height: 120
-		// Docked Bottom-Right (using available screen info)
+		// Docked Bottom-Right (Approximate WorkArea due to Wails struct limitations)
 		width := 600
 		height := 120
 
-		// FIX: Wails v2.11 Compiler reports Screen struct has no X, Y, Bounds, or WorkArea.
-		// However, it seems to accept Size.
-		// We assume Primary Monitor is at (0,0).
-		
+		// Use detected Size
 		screenWidth := 1920
 		screenHeight := 1080
 		
-		// Attempt to use detected Size
 		if primary.Size.Width > 0 {
 			screenWidth = primary.Size.Width
 			screenHeight = primary.Size.Height
 		}
 
-		// Calculate Position: Bottom-Right Dock position
-		// Assuming X,Y = 0,0 because we can't read them.
-		// Manual Taskbar Buffer: ~48px. 
-		// Mini Mode Height: 120. 
-		// Padding from bottom: 0 (Visual dock style) or small gap?
-		// User Spec: "Docked bottom-right above taskbar"
+	// Calculate Position: Bottom-Right Dock position
+		// "Move to WorkArea.Right - 600, WorkArea.Bottom - 120"
+		// Assuming taskbar is ~48px height on bottom
 		
-		// Align Right: ScreenWidth - WindowWidth
 		x := screenWidth - width
-		
-		// Align Bottom: ScreenHeight - WindowHeight - TaskbarOffset
-		// Windows Taskbar is typically 40-48px. Let's use 48px safe zone.
 		y := screenHeight - height - 48
 
-		// ROBUSTNESS: Explicitly set size BEFORE position, then again after to ensure it sticks.
-		// Wails/Windows sometimes ignores resize if moved simultaneously.
+		// CRITICAL: Do NOT use WindowToggleMaximise. Use WindowSetSize and WindowSetPosition.
 		wailsruntime.WindowSetSize(a.ctx, width, height)
 		wailsruntime.WindowSetPosition(a.ctx, x, y)
 		wailsruntime.WindowSetAlwaysOnTop(a.ctx, true)
 		
-		// "Double-tap" resize to force layout update if OS animation interfered
+		// Robustness: Re-apply size to fight OS animations
 		go func() {
-			goruntime.Gosched() // Yield
+			goruntime.Gosched()
 			wailsruntime.WindowSetSize(a.ctx, width, height)
 		}()
 		
