@@ -295,3 +295,50 @@ func (a *App) IsPhoneConnected() bool {
 	return len(clients) > 0
 }
 
+// ToggleMiniMode switches between the standard vertical layout and the Always-on-Top mini mode.
+func (a *App) ToggleMiniMode(isMini bool) {
+	if a.ctx == nil {
+		return
+	}
+
+	if isMini {
+		// Get primary screen to calculate position relative to Taskbar
+		screens, err := wailsruntime.ScreenGetAll(a.ctx)
+		if err != nil || len(screens) == 0 {
+			// Fallback if screen info unavailable
+			wailsruntime.WindowSetSize(a.ctx, 600, 120)
+			return
+		}
+
+		// Find primary screen
+		var primary *wailsruntime.Screen
+		for _, s := range screens {
+			if s.IsPrimary {
+				primary = &s
+				break
+			}
+		}
+		if primary == nil {
+			primary = &screens[0]
+		}
+
+		// Calculate Position: Bottom-Right, above taskbar
+		// WorkArea accounts for taskbar. 
+		// We want 20px padding from right (600 + 20 = 620 offset)
+		// We want 20px padding from bottom (120 + 20 = 140 offset)
+		width := 600
+		height := 120
+		
+		x := primary.WorkArea.X + primary.WorkArea.Width - width - 20
+		y := primary.WorkArea.Y + primary.WorkArea.Height - height - 20
+
+		wailsruntime.WindowSetSize(a.ctx, width, height)
+		wailsruntime.WindowSetPosition(a.ctx, x, y)
+		wailsruntime.WindowSetAlwaysOnTop(a.ctx, true)
+	} else {
+		// Restore to Standard Vertical Mode
+		wailsruntime.WindowSetSize(a.ctx, 400, 700)
+		wailsruntime.WindowCenter(a.ctx)
+		wailsruntime.WindowSetAlwaysOnTop(a.ctx, false)
+	}
+}
