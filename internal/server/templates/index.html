@@ -790,118 +790,121 @@
                         etaStat.textContent = formatEta(eta);
 
                         lastTime = now;
+                        lastBytes = uploaded;
+                    }
+                };
 
-                        try {
-                            // Upload in batches of MAX_PARALLEL chunks
-                            // This ensures ALL chunks complete before moving to next batch
-                            for (let batchStart = 0; batchStart < totalChunks; batchStart += MAX_PARALLEL) {
-                                const batchEnd = Math.min(batchStart + MAX_PARALLEL, totalChunks);
-                                const batch = [];
+                try {
+                    // Upload in batches of MAX_PARALLEL chunks
+                    // This ensures ALL chunks complete before moving to next batch
+                    for (let batchStart = 0; batchStart < totalChunks; batchStart += MAX_PARALLEL) {
+                        const batchEnd = Math.min(batchStart + MAX_PARALLEL, totalChunks);
+                        const batch = [];
 
-                                // Create batch of uploads
-                                for (let i = batchStart; i < batchEnd; i++) {
-                                    batch.push(uploadChunk(i));
-                                }
-
-                                // Wait for ENTIRE batch to complete
-                                await Promise.all(batch);
-
-                                console.log(`Batch ${batchStart}-${batchEnd - 1} complete`);
-                            }
-
-                            // All chunks uploaded
-                            console.log('All chunks uploaded successfully');
-                            const totalTime = (Date.now() - startTime) / 1000;
-                            const avgSpeed = totalSize / totalTime;
-                            transferComplete(file.name, true, totalSize, totalTime, avgSpeed);
-
-                        } catch (error) {
-                            console.error('Parallel upload failed:', error);
-                            transferComplete(file.name, false);
+                        // Create batch of uploads
+                        for (let i = batchStart; i < batchEnd; i++) {
+                            batch.push(uploadChunk(i));
                         }
+
+                        // Wait for ENTIRE batch to complete
+                        await Promise.all(batch);
+
+                        console.log(`Batch ${batchStart}-${batchEnd - 1} complete`);
                     }
 
-                    function transferComplete(name, success, totalBytes, totalTime, avgSpeed) {
-                        activeXHR = null; // Clear reference
+                    // All chunks uploaded
+                    console.log('All chunks uploaded successfully');
+                    const totalTime = (Date.now() - startTime) / 1000;
+                    const avgSpeed = totalSize / totalTime;
+                    transferComplete(file.name, true, totalSize, totalTime, avgSpeed);
 
-                        // Show stats in permanent banner
-                        if (success && totalBytes && totalTime) {
-                            const speedMBps = (avgSpeed / (1024 * 1024)).toFixed(1);
-                            const timeSec = totalTime.toFixed(1);
+                } catch (error) {
+                    console.error('Parallel upload failed:', error);
+                    transferComplete(file.name, false);
+                }
+            }
 
-                            // Update banner (permanent)
-                            statsContent.textContent = `${speedMBps} MB/s | ${timeSec}s`;
-                            statsBanner.classList.add('show');
-                            // No timeout - stays visible
+            function transferComplete(name, success, totalBytes, totalTime, avgSpeed) {
+                activeXHR = null; // Clear reference
 
-                            console.log(`[STATS] 📊 ${name}: ${speedMBps} MB/s | ${timeSec}s`);
-                        }
+                // Show stats in permanent banner
+                if (success && totalBytes && totalTime) {
+                    const speedMBps = (avgSpeed / (1024 * 1024)).toFixed(1);
+                    const timeSec = totalTime.toFixed(1);
 
-                        // Update transfer panel (which will hide after 2s)
-                        mainTitle.textContent = success ? 'Transfer Complete!' : 'Transfer Failed';
-                        transferStatus.textContent = success ? 'Sent successfully' : 'Error occurred';
-                        progressFill.style.width = '100%';
-                        progressStat.textContent = '100%';
+                    // Update banner (permanent)
+                    statsContent.textContent = `${speedMBps} MB/s | ${timeSec}s`;
+                    statsBanner.classList.add('show');
+                    // No timeout - stays visible
 
-                        if (success) {
-                            addRecentFile(name, 'sent');
-                        }
+                    console.log(`[STATS] 📊 ${name}: ${speedMBps} MB/s | ${timeSec}s`);
+                }
 
-                        setTimeout(() => {
-                            transferPanel.classList.remove('active');
-                            selectBtn.style.display = 'flex';
-                            mainTitle.textContent = 'Send Files to PC';
-                            progressFill.style.width = '0%';
-                        }, 2000);
-                    }
+                // Update transfer panel (which will hide after 2s)
+                mainTitle.textContent = success ? 'Transfer Complete!' : 'Transfer Failed';
+                transferStatus.textContent = success ? 'Sent successfully' : 'Error occurred';
+                progressFill.style.width = '100%';
+                progressStat.textContent = '100%';
 
-                    function addRecentFile(name, type) {
-                        recentFiles.unshift({ name, type, time: Date.now() });
-                        if (recentFiles.length > 3) recentFiles.pop();
-                        renderRecents();
-                    }
+                if (success) {
+                    addRecentFile(name, 'sent');
+                }
 
-                    function renderRecents() {
-                        if (recentFiles.length === 0) {
-                            recentsDiv.innerHTML = '';
-                            return;
-                        }
+                setTimeout(() => {
+                    transferPanel.classList.remove('active');
+                    selectBtn.style.display = 'flex';
+                    mainTitle.textContent = 'Send Files to PC';
+                    progressFill.style.width = '0%';
+                }, 2000);
+            }
 
-                        let html = '<div class="recents-header">Recent Transfers</div>';
-                        recentFiles.forEach(f => {
-                            const icon = f.type === 'sent' ? '↑' : '↓';
-                            html += `
+            function addRecentFile(name, type) {
+                recentFiles.unshift({ name, type, time: Date.now() });
+                if (recentFiles.length > 3) recentFiles.pop();
+                renderRecents();
+            }
+
+            function renderRecents() {
+                if (recentFiles.length === 0) {
+                    recentsDiv.innerHTML = '';
+                    return;
+                }
+
+                let html = '<div class="recents-header">Recent Transfers</div>';
+                recentFiles.forEach(f => {
+                    const icon = f.type === 'sent' ? '↑' : '↓';
+                    html += `
                         <div class="recent-item">
                             <div class="recent-icon">${icon}</div>
                             <div class="recent-name">${f.name}</div>
                             <div class="recent-badge">${f.type}</div>
                         </div>
                     `;
-                        });
-                        recentsDiv.innerHTML = html;
-                    }
+                });
+                recentsDiv.innerHTML = html;
+            }
 
-                    function formatSpeed(bytesPerSec) {
-                        if (bytesPerSec < 1024) return bytesPerSec.toFixed(0) + ' B/s';
-                        if (bytesPerSec < 1024 * 1024) return (bytesPerSec / 1024).toFixed(1) + ' KB/s';
-                        return (bytesPerSec / (1024 * 1024)).toFixed(1) + ' MB/s';
-                    }
+            function formatSpeed(bytesPerSec) {
+                if (bytesPerSec < 1024) return bytesPerSec.toFixed(0) + ' B/s';
+                if (bytesPerSec < 1024 * 1024) return (bytesPerSec / 1024).toFixed(1) + ' KB/s';
+                return (bytesPerSec / (1024 * 1024)).toFixed(1) + ' MB/s';
+            }
 
-                    function formatEta(seconds) {
-                        if (!seconds || seconds === Infinity) return '--';
-                        if (seconds < 60) return Math.ceil(seconds) + 's';
-                        const mins = Math.floor(seconds / 60);
-                        const secs = Math.ceil(seconds % 60);
-                        return mins + 'm ' + secs + 's';
-                    }
+            function formatEta(seconds) {
+                if (!seconds || seconds === Infinity) return '--';
+                if (seconds < 60) return Math.ceil(seconds) + 's';
+                const mins = Math.floor(seconds / 60);
+                const secs = Math.ceil(seconds % 60);
+                return mins + 'm ' + secs + 's';
+            }
 
-                    // Haptics
-                    const haptics = {
-                        tick: () => navigator.vibrate?.(5),
-                        success: () => navigator.vibrate?.([50, 30, 50]),
-                        error: () => navigator.vibrate?.([300]),
-                    };
-                })();
+            // Haptics
+            const haptics = {
+                tick: () => navigator.vibrate?.(5),
+                success: () => navigator.vibrate?.([50, 30, 50]),
+                error: () => navigator.vibrate?.([300]),
+            };
+        })();
     </script>
 </body>
 
