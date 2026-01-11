@@ -82,6 +82,14 @@ func (sm *SessionManager) GetOrCreateSession(sessionID, filename string, totalCh
 	return session, nil
 }
 
+// IsNewSession checks if this is the first chunk (for start event)
+func (sm *SessionManager) IsNewSession(sessionID string) bool {
+	sm.mu.RLock()
+	defer sm.mu.RUnlock()
+	_, exists := sm.sessions[sessionID]
+	return !exists
+}
+
 // MarkChunkComplete marks a chunk as received
 func (s *UploadSession) MarkChunkComplete(chunkIndex int) {
 	s.mu.Lock()
@@ -206,6 +214,16 @@ func (s *Server) handleParallelUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Emit start event on first chunk
+	if chunkIndex == 0 {
+		s.emitTransferEvent(TransferEvent{
+			Filename:  filename,
+			Status:    "started",
+			Progress:  0,
+			Direction: "receive",
+		})
+	}
+
 	// Write chunk at offset using io.NewOffsetWriter (Go 1.20+)
 	offsetWriter := &offsetWriter{file: session.File, offset: offset}
 	
@@ -224,6 +242,15 @@ func (s *Server) handleParallelUpload(w http.ResponseWriter, r *http.Request) {
 	session.MarkChunkComplete(chunkIndex)
 
 	log.Printf("[AERO] 📦 Chunk %d/%d received (%d bytes)", chunkIndex+1, totalChunks, written)
+
+	// Emit progress event for desktop UI
+	progress := (float64(chunkIndex+1) / float64(totalChunks)) * 100
+	s.emitTransferEvent(TransferEvent{
+		Filename:  filename,
+		Status:    "progress",
+		Progress:  progress,
+		Direction: "receive",
+	})
 
 	// Check if upload is complete
 	if session.IsComplete() {
@@ -262,5 +289,7 @@ type offsetWriter struct {
 }
 
 func (ow *offsetWriter) Write(p []byte) (n int, err error) {
-	return ow.file.WriteAt(p, ow.offset)
+	n, err = ow.file.WriteAt(p, ow.offset)
+	ow.offset += int64(n) // CRITICAL: Increment offset to prevent overwrites
+	return n, err
 }
