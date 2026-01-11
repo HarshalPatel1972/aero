@@ -601,12 +601,12 @@ function App() {
 
       // 3. Resize and reposition window
       setIsCompactMode(true);
-      window.runtime?.WindowSetSize(400, 80); // Horizontal strip
+      window.runtime?.WindowSetSize(400, 100); // Increased for window chrome
       
       // Position above taskbar
       const taskbarHeight = 48; // Windows taskbar
       const stripWidth = 400;
-      const stripHeight = 80;
+      const stripHeight = 100; // Match window height
       const margin = 10;
       const x = window.screen.width - stripWidth - margin;
       const y = window.screen.height - taskbarHeight - stripHeight - margin;
