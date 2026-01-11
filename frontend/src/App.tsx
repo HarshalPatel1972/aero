@@ -599,14 +599,14 @@ function App() {
       // 2. Wait for animation
       await new Promise(resolve => setTimeout(resolve, 300));
 
-      // 3. Resize and reposition window
+      // 3. Resize and reposition window to horizontal strip
       setIsCompactMode(true);
-      window.runtime?.WindowSetSize(400, 100); // Increased for window chrome
+      window.runtime?.WindowSetSize(525, 150); // Half width, compact height
       
       // Position above taskbar
-      const taskbarHeight = 48; // Windows taskbar
-      const stripWidth = 400;
-      const stripHeight = 100; // Match window height
+      const taskbarHeight = 48;
+      const stripWidth = 525;
+      const stripHeight = 150;
       const margin = 10;
       const x = window.screen.width - stripWidth - margin;
       const y = window.screen.height - taskbarHeight - stripHeight - margin;
