@@ -17,8 +17,8 @@ export function CompactView({ serverStatus, onExpand, onTogglePower }: CompactVi
   const isActive = serverStatus.running;
 
   return (
-    <div className="wails-drag h-full flex items-center gap-4 px-4
-      bg-void-surface/95 backdrop-blur-xl border border-white/10 rounded-xl">
+    <div className="wails-drag h-full w-full flex items-center gap-4 px-4
+      bg-void-surface/95 backdrop-blur-xl border-t border-white/10">
       
       {/* Mini QR Code */}
       <div className={`p-2 rounded-lg bg-white transition-all duration-300 ${

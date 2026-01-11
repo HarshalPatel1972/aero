@@ -659,11 +659,12 @@ function App() {
       className={`
         h-full flex flex-col
         bg-void-black
-        rounded-xl overflow-hidden
-        border-2 transition-all duration-300
-        ${isDragOver 
+        ${isCompactMode ? '' : 'rounded-xl border-2'}
+        ${isCompactMode ? '' : isDragOver 
           ? 'border-aero-cyan shadow-glow-cyan-lg' 
           : 'border-void-border'}
+        overflow-hidden
+        transition-all duration-300
       `}
     >
       {/* Compact Mode View */}
