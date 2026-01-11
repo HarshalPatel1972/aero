@@ -4,6 +4,7 @@
 *.so
 *.dylib
 build/
+!build/windows/installer.nsi
 
 # Go
 *.test
