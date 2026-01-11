@@ -669,16 +669,20 @@ function App() {
       className={`
         h-full flex flex-col
         bg-void-black
-        ${isCompactMode ? '' : 'rounded-xl border-2'}
-        ${isCompactMode ? '' : isDragOver 
+        rounded-xl border-2
+        ${isDragOver 
           ? 'border-aero-cyan shadow-glow-cyan-lg' 
           : 'border-void-border'}
         overflow-hidden
         transition-all duration-300
       `}
     >
-      {/* Mini Mode Dock */}
+      <TitleBar 
+        isAlwaysOnTop={isAlwaysOnTop}
+        onToggleAlwaysOnTop={setIsAlwaysOnTop}
+      />
 
+      <div className="flex-1 flex flex-col px-5 py-5 gap-6 overflow-hidden">
         {/* Network Selector */}
         <NetworkSelector
           interfaces={interfaces}
@@ -708,20 +712,12 @@ function App() {
         <RecentFilesZone transfers={transfers} />
       </div>
 
-        <StatusBar
-          active={isActive}
-          soundEnabled={soundEnabled}
-          onOpenFolder={handleOpenFolder}
-          onToggleSound={() => setSoundEnabled(!soundEnabled)}
-        />
-      </>
-        <>
-          <TitleBar 
-            isAlwaysOnTop={isAlwaysOnTop}
-            onToggleAlwaysOnTop={setIsAlwaysOnTop}
-          />
-
-      <div className="flex-1 flex flex-col px-5 py-5 gap-6 overflow-hidden">
+      <StatusBar
+        active={isActive}
+        soundEnabled={soundEnabled}
+        onOpenFolder={handleOpenFolder}
+        onToggleSound={() => setSoundEnabled(!soundEnabled)}
+      />
     </div>
   );
 }
