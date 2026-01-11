@@ -15,3 +15,5 @@ export function SendFileToPhone():Promise<void>;
 export function StartServer(arg1:string):Promise<void>;
 
 export function StopServer():Promise<void>;
+
+export function ToggleMiniMode(arg1:boolean):Promise<void>;

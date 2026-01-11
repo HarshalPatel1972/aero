@@ -29,3 +29,7 @@ export function StartServer(arg1) {
 export function StopServer() {
   return window['go']['main']['App']['StopServer']();
 }
+
+export function ToggleMiniMode(arg1) {
+  return window['go']['main']['App']['ToggleMiniMode'](arg1);
+}
