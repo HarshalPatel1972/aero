@@ -335,23 +335,19 @@ func (a *App) ToggleMiniMode(isMini bool) {
 		width := 600
 		height := 120
 		
-		// Attempt to use Size struct or top-level fields (checking common patterns)
-		// If Size struct exists:
-		screenWidth := primary.Size.Width
-		screenHeight := primary.Size.Height
-		screenX := primary.X
-		screenY := primary.Y
 
-		// If Size is 0 (maybe it's PhysicalSize?), try that or fallback defaults
-		if screenWidth == 0 {
-			screenWidth = 1920 // Fallback
-		}
-		if screenHeight == 0 {
-			screenHeight = 1080 // Fallback
-		}
-
-		x := screenX + screenWidth - width - 20
-		y := screenY + screenHeight - height - 60 // 20 padding + ~40 taskbar
+		// Calculate Position: Bottom-Right
+		// Fallback to hardcoded 1080p bottom-right due to Wails struct API mismatch
+		// TODO: Fix screen API access for multi-monitor support
+		width := 600
+		height := 120
+		
+		// Assume 1080p primary monitor
+		screenWidth := 1920
+		screenHeight := 1080
+		
+		x := screenWidth - width - 20
+		y := screenHeight - height - 60 // ~40px taskbar + 20px padding
 
 		wailsruntime.WindowSetSize(a.ctx, width, height)
 		wailsruntime.WindowSetPosition(a.ctx, x, y)
