@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="build/appicon.png" width="128" height="128" alt="Aero Logo">
+<img src="assets/appicon.png" width="128" height="128" alt="Aero Logo">
 
 # AERO
 
