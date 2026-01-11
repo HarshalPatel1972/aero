@@ -102,12 +102,27 @@ func (s *UploadSession) IsComplete() bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	
-	for _, received := range s.ReceivedMask {
+	for i, received := range s.ReceivedMask {
 		if !received {
+			log.Printf("[AERO] ⚠️  Chunk %d not received yet", i)
 			return false
 		}
 	}
 	return true
+}
+
+// GetMissingChunks returns indices of chunks not yet received
+func (s *UploadSession) GetMissingChunks() []int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	
+	missing := []int{}
+	for i, received := range s.ReceivedMask {
+		if !received {
+			missing = append(missing, i)
+		}
+	}
+	return missing
 }
 
 // Finalize completes the upload (atomic rename)
@@ -238,6 +253,11 @@ func (s *Server) handleParallelUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// CRITICAL VALIDATION: Check if all bytes were written
+	if chunkIndex < totalChunks-1 && written != 5*1024*1024 {
+		log.Printf("[AERO] ⚠️  WARNING: Chunk %d incomplete! Expected 5MB, got %d bytes", chunkIndex, written)
+	}
+
 	// Mark chunk as complete
 	session.MarkChunkComplete(chunkIndex)
 
@@ -254,6 +274,16 @@ func (s *Server) handleParallelUpload(w http.ResponseWriter, r *http.Request) {
 
 	// Check if upload is complete
 	if session.IsComplete() {
+		// FINAL VALIDATION: Check all chunks before finalize
+		missingChunks := session.GetMissingChunks()
+		if len(missingChunks) > 0 {
+			log.Printf("[AERO] ❌ CRITICAL: IsComplete=true but missing chunks: %v", missingChunks)
+			http.Error(w, "Missing chunks", http.StatusInternalServerError)
+			return
+		}
+
+		log.Printf("[AERO] ✅ All %d chunks received. Finalizing...", totalChunks)
+
 		if err := session.Finalize(); err != nil {
 			log.Printf("[AERO] ❌ Finalization failed: %v", err)
 			session.Cleanup()
