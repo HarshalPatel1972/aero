@@ -28,6 +28,7 @@ declare global {
       EventsOff: (eventName: string) => void;
       WindowMinimise: () => void;
       WindowClose: () => void;
+      WindowSetAlwaysOnTop: (alwaysOnTop: boolean) => void;
       Quit: () => void;
     };
     go: {
