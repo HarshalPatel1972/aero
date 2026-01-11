@@ -28,7 +28,7 @@ import {
 import type { NetworkInterface, ServerStatus, TransferEvent } from './types';
 import { useTransfer } from './hooks/useTransfer';
 import { ActivePanel } from './components/Transfer/ActivePanel';
-import { HorizontalDock } from './components/HorizontalDock';
+import { MiniDock } from './components/MiniDock';
 
 // ═══════════════════════════════════════════════════════════════
 // AERO LOGO COMPONENT
@@ -603,7 +603,7 @@ function App() {
       
       try {
         // @ts-ignore - Wails binding
-        await window.go.main.App.ToggleMiniMode(true);
+        await window.go.main.App.SetMiniMode(true);
       } catch (err) {
         console.error("Failed to toggle mini mode:", err);
       }
@@ -627,7 +627,7 @@ function App() {
       
       try {
         // @ts-ignore - Wails binding
-        await window.go.main.App.ToggleMiniMode(false);
+        await window.go.main.App.SetMiniMode(false);
       } catch (err) {
         console.error("Failed to restore standard mode:", err);
       }
@@ -648,6 +648,19 @@ function App() {
     };
   }, [isAlwaysOnTop, isCompactMode]);
 
+  // Strict Conditional Rendering: Mini Dock vs Standard Layout
+  if (isCompactMode) {
+    return (
+      <div className="h-screen w-screen bg-transparent overflow-hidden">
+        <MiniDock 
+          serverStatus={serverStatus || { running: false, url: '', ip: '', port: '' }}
+          onRestore={() => window.focus()}
+          onTogglePower={handleToggle}
+        />
+      </div>
+    );
+  }
+
   return (
     <div 
       onDragOver={handleDragOver}
@@ -665,20 +678,7 @@ function App() {
       `}
     >
       {/* Mini Mode Dock */}
-      {isCompactMode ? (
-        <HorizontalDock 
-          serverStatus={serverStatus || { running: false, url: '', ip: '', port: '' }}
-          onExpand={() => window.focus()}
-          onTogglePower={handleToggle}
-        />
-      ) : (
-        <>
-          <TitleBar 
-            isAlwaysOnTop={isAlwaysOnTop}
-            onToggleAlwaysOnTop={setIsAlwaysOnTop}
-          />
 
-      <div className="flex-1 flex flex-col px-5 py-5 gap-6 overflow-hidden">
         {/* Network Selector */}
         <NetworkSelector
           interfaces={interfaces}
@@ -715,7 +715,13 @@ function App() {
           onToggleSound={() => setSoundEnabled(!soundEnabled)}
         />
       </>
-      )}
+        <>
+          <TitleBar 
+            isAlwaysOnTop={isAlwaysOnTop}
+            onToggleAlwaysOnTop={setIsAlwaysOnTop}
+          />
+
+      <div className="flex-1 flex flex-col px-5 py-5 gap-6 overflow-hidden">
     </div>
   );
 }
