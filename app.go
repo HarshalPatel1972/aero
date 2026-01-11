@@ -328,19 +328,32 @@ func (a *App) SetMiniMode(enabled bool) {
 		width := 600
 		height := 120
 
-		// Use WorkArea to position (Respects Taskbar)
-		// Rect struct usually has X, Y, Width, Height
-		workArea := primary.WorkArea
+		// FIX: Wails v2.11 Compiler reports Screen struct has no X, Y, Bounds, or WorkArea.
+		// However, it seems to accept Size.
+		// We assume Primary Monitor is at (0,0).
 		
-		// If WorkArea is zero (unlikely on modern Wails), fallback to Bounds
-		if workArea.Width == 0 || workArea.Height == 0 {
-			workArea = primary.Bounds
+		screenWidth := 1920
+		screenHeight := 1080
+		
+		// Attempt to use detected Size
+		if primary.Size.Width > 0 {
+			screenWidth = primary.Size.Width
+			screenHeight = primary.Size.Height
 		}
 
 		// Calculate Position: Bottom-Right Dock position
-		// Strict docking to the WorkArea edges
-		x := workArea.X + workArea.Width - width
-		y := workArea.Y + workArea.Height - height
+		// Assuming X,Y = 0,0 because we can't read them.
+		// Manual Taskbar Buffer: ~48px. 
+		// Mini Mode Height: 120. 
+		// Padding from bottom: 0 (Visual dock style) or small gap?
+		// User Spec: "Docked bottom-right above taskbar"
+		
+		// Align Right: ScreenWidth - WindowWidth
+		x := screenWidth - width
+		
+		// Align Bottom: ScreenHeight - WindowHeight - TaskbarOffset
+		// Windows Taskbar is typically 40-48px. Let's use 48px safe zone.
+		y := screenHeight - height - 48
 
 		// ROBUSTNESS: Explicitly set size BEFORE position, then again after to ensure it sticks.
 		// Wails/Windows sometimes ignores resize if moved simultaneously.
