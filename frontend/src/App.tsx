@@ -592,29 +592,23 @@ function App() {
     const handleBlur = async () => {
       // 1. CSS pre-animation for smoothness
       const root = document.documentElement;
-      root.style.transition = 'transform 300ms ease-out, opacity 300ms ease-out';
-      root.style.transform = 'scale(0.95)';
-      root.style.opacity = '0.8';
+      root.style.transition = 'opacity 300ms ease-out';
+      root.style.opacity = '0.9';
 
       // 2. Wait for animation
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await new Promise(resolve => setTimeout(resolve, 200));
 
-      // 3. Resize and reposition window to horizontal strip
+      // 3. Switch to Mini Mode via Backend
       setIsCompactMode(true);
-      window.runtime?.WindowSetSize(525, 150); // Half width, compact height
       
-      // Position above taskbar
-      const taskbarHeight = 48;
-      const stripWidth = 525;
-      const stripHeight = 150;
-      const margin = 10;
-      const x = window.screen.width - stripWidth - margin;
-      const y = window.screen.height - taskbarHeight - stripHeight - margin;
-      window.runtime?.WindowSetPosition(x, y);
+      try {
+        // @ts-ignore - Wails binding
+        await window.go.main.App.ToggleMiniMode(true);
+      } catch (err) {
+        console.error("Failed to toggle mini mode:", err);
+      }
 
-      // 4. Reset CSS after resize
-      await new Promise(resolve => setTimeout(resolve, 50));
-      root.style.transform = 'scale(1)';
+      // 4. Reset CSS
       root.style.opacity = '1';
       setTimeout(() => {
         root.style.transition = '';
@@ -624,18 +618,21 @@ function App() {
     const handleFocus = async () => {
       // Smooth expand animation
       const root = document.documentElement;
-      root.style.transition = 'transform 300ms ease-out, opacity 300ms ease-out';
-      root.style.transform = 'scale(1.05)';
-      root.style.opacity = '0.8';
+      root.style.transition = 'opacity 300ms ease-out';
+      root.style.opacity = '0.9';
 
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await new Promise(resolve => setTimeout(resolve, 200));
 
       setIsCompactMode(false);
-      window.runtime?.WindowSetSize(1050, 670);
-      window.runtime?.WindowCenter();
+      
+      try {
+        // @ts-ignore - Wails binding
+        await window.go.main.App.ToggleMiniMode(false);
+      } catch (err) {
+        console.error("Failed to restore standard mode:", err);
+      }
 
-      await new Promise(resolve => setTimeout(resolve, 50));
-      root.style.transform = 'scale(1)';
+      // Reset CSS
       root.style.opacity = '1';
       setTimeout(() => {
         root.style.transition = '';
