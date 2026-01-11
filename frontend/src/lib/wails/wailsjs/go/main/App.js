@@ -22,14 +22,14 @@ export function SendFileToPhone() {
   return window['go']['main']['App']['SendFileToPhone']();
 }
 
+export function SetMiniMode(arg1) {
+  return window['go']['main']['App']['SetMiniMode'](arg1);
+}
+
 export function StartServer(arg1) {
   return window['go']['main']['App']['StartServer'](arg1);
 }
 
 export function StopServer() {
   return window['go']['main']['App']['StopServer']();
-}
-
-export function ToggleMiniMode(arg1) {
-  return window['go']['main']['App']['ToggleMiniMode'](arg1);
 }

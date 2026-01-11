@@ -24,11 +24,12 @@ import {
   ArrowUpRight,
   ArrowDownLeft,
   Zap,
+  GripVertical,
+  Maximize2
 } from 'lucide-react';
 import type { NetworkInterface, ServerStatus, TransferEvent } from './types';
 import { useTransfer } from './hooks/useTransfer';
 import { ActivePanel } from './components/Transfer/ActivePanel';
-import { MiniDock } from './components/MiniDock';
 
 // ═══════════════════════════════════════════════════════════════
 // AERO LOGO COMPONENT
@@ -93,7 +94,7 @@ const playCompletionSound = () => {
 };
 
 // ═══════════════════════════════════════════════════════════════
-// CUSTOM TITLEBAR
+// CUSTOM TITLEBAR (Standard Mode Only)
 // ═══════════════════════════════════════════════════════════════
 
 function TitleBar({ isAlwaysOnTop, onToggleAlwaysOnTop }: { 
@@ -153,6 +154,46 @@ function TitleBar({ isAlwaysOnTop, onToggleAlwaysOnTop }: {
           <X className="w-4 h-4 text-white/40 group-hover:text-red-400" />
         </button>
       </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SIDE HANDLE (Mini Mode Only)
+// ═══════════════════════════════════════════════════════════════
+
+function SideHandle({ onRestore }: { onRestore: () => void }) {
+  return (
+    <div className="
+      h-full w-12 flex-shrink-0
+      bg-zinc-900/80 border-r border-zinc-800
+      flex flex-col items-center justify-center gap-4
+    ">
+      {/* 1. The Drag Grip - Strictly Isolated Drag Region */}
+      <div className="wails-drag p-2 rounded cursor-grab active:cursor-grabbing hover:bg-white/5 transition-colors">
+        <div className="grid grid-cols-2 gap-1 opacity-50">
+           {/* Custom 6-dot grip pattern */}
+           <div className="w-1 h-1 rounded-full bg-white"/>
+           <div className="w-1 h-1 rounded-full bg-white"/>
+           <div className="w-1 h-1 rounded-full bg-white"/>
+           <div className="w-1 h-1 rounded-full bg-white"/>
+           <div className="w-1 h-1 rounded-full bg-white"/>
+           <div className="w-1 h-1 rounded-full bg-white"/>
+        </div>
+      </div>
+
+      {/* 2. Restore Button */}
+      <button 
+        onClick={onRestore}
+        className="
+          p-2 rounded-lg text-zinc-400 
+          hover:text-white hover:bg-white/10 
+          transition-all active:scale-90
+        "
+        title="Restore Standard View"
+      >
+        <Maximize2 size={18} />
+      </button>
     </div>
   );
 }
@@ -228,39 +269,45 @@ function NetworkSelector({
 }
 
 // ═══════════════════════════════════════════════════════════════
-// QR CODE ZONE (Zone A - Receive Mode)
+// QR CODE ZONE (Zone A - Morphing)
 // ═══════════════════════════════════════════════════════════════
 
-function QRZone({ url, active }: { url: string; active: boolean }) {
+function QRZone({ url, active, isCompact }: { url: string; active: boolean; isCompact: boolean }) {
   return (
-    <div className="flex flex-col items-center gap-3">
-      {/* Header - single message */}
-      <h2 className="text-lg font-bold text-white/90 tracking-tight text-center">
-        {active ? 'Scan to Transfer Files' : 'Start Server to Connect'}
-      </h2>
+    <div className={`
+      flex transition-all duration-300
+      ${isCompact ? 'flex-row ml-2' : 'flex-col items-center gap-3'}
+    `}>
+      {/* Header - Standard Only */}
+      {!isCompact && (
+        <h2 className="text-lg font-bold text-white/90 tracking-tight text-center">
+          {active ? 'Scan to Transfer Files' : 'Start Server to Connect'}
+        </h2>
+      )}
       
       {/* QR Container */}
       <div className={`
-        relative p-3 rounded-2xl
-        bg-white transition-all duration-500
+        relative rounded-xl bg-white transition-all duration-300
         ${active ? 'shadow-glow-cyan animate-breathe' : 'opacity-50'}
+        ${isCompact ? 'p-1 w-20 h-20' : 'p-3 w-40 h-40'}
       `}>
         {/* Glow */}
         {active && (
-          <div className="absolute inset-0 bg-aero-cyan/30 rounded-2xl blur-2xl -z-10" />
+          <div className="absolute inset-0 bg-aero-cyan/30 rounded-xl blur-lg -z-10" />
         )}
         
         <QRCodeSVG
           value={url || 'https://aero.app'}
-          size={140}
+          size={isCompact ? 72 : 136} // Fit within the container padding
           level="M"
           bgColor="transparent"
           fgColor={active ? '#050505' : '#666666'}
+          className="w-full h-full"
         />
       </div>
 
-      {/* Simple subtitle only when active */}
-      {active && (
+      {/* Subtitle - Standard Only */}
+      {!isCompact && active && (
         <p className="text-sm text-white/50 text-center">
           Point your phone camera at the QR code
         </p>
@@ -270,28 +317,33 @@ function QRZone({ url, active }: { url: string; active: boolean }) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// POWER & SEND BUTTONS
+// ACTION BUTTONS (Morphing)
 // ═══════════════════════════════════════════════════════════════
 
 function ActionButtons({
   active,
   loading,
+  isCompact,
   onToggle,
   onSendToPhone,
 }: {
   active: boolean;
   loading: boolean;
+  isCompact: boolean;
   onToggle: () => void;
   onSendToPhone: () => void;
 }) {
   return (
-    <div className="flex items-center justify-center gap-4">
+    <div className={`
+      flex items-center gap-4 transition-all duration-300
+      ${isCompact ? 'ml-4' : 'justify-center'}
+    `}>
       {/* Power Button */}
       <button
         onClick={onToggle}
         disabled={loading}
         className={`
-          relative w-14 h-14 rounded-xl
+          relative rounded-xl
           flex items-center justify-center
           transition-all duration-300
           active:scale-95 transform-gpu
@@ -299,22 +351,23 @@ function ActionButtons({
             ? 'bg-aero-cyan/30 text-aero-cyan border-2 border-aero-cyan shadow-glow-cyan' 
             : 'bg-white/10 text-white border-2 border-white/40 hover:bg-white/20 hover:border-white/60'}
           ${loading ? 'cursor-wait' : ''}
+          ${isCompact ? 'w-12 h-12' : 'w-14 h-14'}
         `}
         aria-label={active ? 'Stop' : 'Start'}
       >
         {loading ? (
-          <Loader2 className="w-7 h-7 animate-spin" />
+          <Loader2 className={`${isCompact ? 'w-6 h-6' : 'w-7 h-7'} animate-spin`} />
         ) : (
-          <Power className="w-7 h-7" />
+          <Power className={`${isCompact ? 'w-6 h-6' : 'w-7 h-7'}`} />
         )}
         
         {active && !loading && (
-          <div className="absolute inset-0 rounded-2xl border-2 border-aero-cyan/40 animate-ping" />
+          <div className="absolute inset-0 rounded-xl border-2 border-aero-cyan/40 animate-ping" />
         )}
       </button>
 
-      {/* Send to Phone Button */}
-      {active && (
+      {/* Send to Phone Button - Hide in Compact Mode to save space */}
+      {active && !isCompact && (
         <button
           onClick={onSendToPhone}
           className="
@@ -336,7 +389,7 @@ function ActionButtons({
 }
 
 // ═══════════════════════════════════════════════════════════════
-// RECENT FILES (Zone B)
+// RECENT FILES (Zone B - Morphing)
 // ═══════════════════════════════════════════════════════════════
 
 function TransferItem({ transfer }: { transfer: Transfer }) {
@@ -391,9 +444,27 @@ function TransferItem({ transfer }: { transfer: Transfer }) {
   );
 }
 
-function RecentFilesZone({ transfers }: { transfers: Transfer[] }) {
+function RecentFilesZone({ transfers, isCompact }: { transfers: Transfer[], isCompact: boolean }) {
+  if (isCompact) {
+    // Mini Mode: Just text "Last: <last_file>"
+    const lastTransfer = transfers[0];
+    return (
+      <div className="flex-1 ml-6 h-full flex flex-col justify-center pr-4 transition-all duration-300">
+        <div className="flex flex-col">
+          <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">
+            LAST TRANSFER
+          </span>
+          <span className="text-zinc-200 font-mono text-sm truncate max-w-[200px]">
+            {lastTransfer ? lastTransfer.filename : "No transfers yet"}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  // Standard Mode: Full List
   return (
-    <div className="flex flex-col gap-3 flex-1 min-h-0">
+    <div className="flex flex-col gap-3 flex-1 min-h-0 transition-opacity duration-300">
       <h3 className="text-sm font-semibold text-white/50 uppercase tracking-wider px-1">
         Recent Files
       </h3>
@@ -577,147 +648,151 @@ function App() {
     // Future: handle dropped files
   };
 
-  // Compact Mode: Window focus detection with smooth transitions
-  useEffect(() => {
-    if (!isAlwaysOnTop) {
-      // Restore to full size if always-on-top is disabled
-      if (isCompactMode) {
-        setIsCompactMode(false);
-        window.runtime?.WindowSetSize(1050, 670);
-        window.runtime?.WindowCenter();
+  // Switch Modes
+  const setMode = async (enabled: boolean) => {
+    // 1. CSS pre-animation
+    const root = document.documentElement;
+    root.style.transition = 'opacity 300ms ease-out';
+    root.style.opacity = '0.9';
+
+    // 2. Wait
+    await new Promise(resolve => setTimeout(resolve, 200));
+
+    // 3. State update + Backend Call
+    setIsCompactMode(enabled);
+    try {
+      // @ts-ignore - Wails binding
+      await window.go.main.App.SetMiniMode(enabled);
+      
+      // If going back to standard, ensure we update always on top state to match backend standard
+      if (!enabled) {
+        setIsAlwaysOnTop(false);
       }
-      return;
+    } catch (err) {
+      console.error("Failed to set mode:", err);
     }
 
-    const handleBlur = async () => {
-      // 1. CSS pre-animation for smoothness
-      const root = document.documentElement;
-      root.style.transition = 'opacity 300ms ease-out';
-      root.style.opacity = '0.9';
-
-      // 2. Wait for animation
-      await new Promise(resolve => setTimeout(resolve, 200));
-
-      // 3. Switch to Mini Mode via Backend
-      setIsCompactMode(true);
-      
-      try {
-        // @ts-ignore - Wails binding
-        await window.go.main.App.SetMiniMode(true);
-      } catch (err) {
-        console.error("Failed to toggle mini mode:", err);
-      }
-
-      // 4. Reset CSS
-      root.style.opacity = '1';
-      setTimeout(() => {
+    // 4. Reset CSS
+    root.style.opacity = '1';
+    setTimeout(() => {
         root.style.transition = '';
-      }, 300);
-    };
+    }, 300);
+  };
 
-    const handleFocus = async () => {
-      // Smooth expand animation
-      const root = document.documentElement;
-      root.style.transition = 'opacity 300ms ease-out';
-      root.style.opacity = '0.9';
+  // Initial Logic: Ensure Always On Top follows mode
+  useEffect(() => {
+    if (isCompactMode) {
+      if (!isAlwaysOnTop) setIsAlwaysOnTop(true);
+    }
+  }, [isCompactMode]);
 
-      await new Promise(resolve => setTimeout(resolve, 200));
 
-      setIsCompactMode(false);
-      
-      try {
-        // @ts-ignore - Wails binding
-        await window.go.main.App.SetMiniMode(false);
-      } catch (err) {
-        console.error("Failed to restore standard mode:", err);
-      }
-
-      // Reset CSS
-      root.style.opacity = '1';
-      setTimeout(() => {
-        root.style.transition = '';
-      }, 300);
-    };
-
-    window.addEventListener('blur', handleBlur);
-    window.addEventListener('focus', handleFocus);
-
-    return () => {
-      window.removeEventListener('blur', handleBlur);
-      window.removeEventListener('focus', handleFocus);
-    };
-  }, [isAlwaysOnTop, isCompactMode]);
-
-  // Strict Conditional Rendering: Mini Dock vs Standard Layout
-  if (isCompactMode) {
-    return (
-      <div className="h-screen w-screen bg-transparent overflow-hidden">
-        <MiniDock 
-          serverStatus={serverStatus || { running: false, url: '', ip: '', port: '' }}
-          onRestore={() => window.focus()}
-          onTogglePower={handleToggle}
-        />
-      </div>
-    );
-  }
+  // ════════════════════════════════════════════════════════════
+  // UNIFIED RENDER
+  // ════════════════════════════════════════════════════════════
+  
+  // Base classes for the outer container
+  // CRITICAL: style={{ "--wails-draggable": "no-drag" }} applied inline
+  const containerClasses = `
+    overflow-hidden transition-all duration-300 ease-in-out
+    ${isBigDragOver ? 'border-aero-cyan shadow-glow-cyan-lg' : 'border-zinc-800'}
+    ${isCompactMode 
+        ? 'w-screen h-screen flex flex-row items-center bg-zinc-950 border' 
+        : 'h-full flex flex-col bg-void-black rounded-xl border-2'
+    }
+  `;
+  
+  const isBigDragOver = !isCompactMode && isDragOver;
 
   return (
     <div 
+      style={{ "--wails-draggable": "no-drag" } as React.CSSProperties}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      className={`
-        h-full flex flex-col
-        bg-void-black
-        rounded-xl border-2
-        ${isDragOver 
-          ? 'border-aero-cyan shadow-glow-cyan-lg' 
-          : 'border-void-border'}
-        overflow-hidden
-        transition-all duration-300
-      `}
+      className={containerClasses}
     >
-      <TitleBar 
-        isAlwaysOnTop={isAlwaysOnTop}
-        onToggleAlwaysOnTop={setIsAlwaysOnTop}
-      />
+      {/* 
+        SECTION 1: DRAG HANDLES 
+        - Standard Mode: TitleBar (Top)
+        - Mini Mode: SideHandle (Left)
+      */}
+      {!isCompactMode ? (
+        <TitleBar 
+          isAlwaysOnTop={isAlwaysOnTop}
+          onToggleAlwaysOnTop={setIsAlwaysOnTop}
+        />
+      ) : (
+        <SideHandle onRestore={() => setMode(false)} />
+      )}
 
-      <div className="flex-1 flex flex-col px-5 py-5 gap-6 overflow-hidden">
-        {/* Network Selector */}
-        <NetworkSelector
-          interfaces={interfaces}
-          selected={selectedInterface}
-          onSelect={setSelectedInterface}
-          disabled={isActive}
+      {/* 
+        SECTION 2: MAIN CONTENT AREA
+        - Standard: Vertical Column
+        - Mini: Horizontal Row 
+      */}
+      <div className={`
+        flex-1 overflow-hidden transition-all duration-300
+        ${isCompactMode 
+          ? 'flex flex-row items-center px-0 gap-4' 
+          : 'flex flex-col px-5 py-5 gap-6'
+        }
+      `}>
+        
+        {/* Network Selector - Standard Only */}
+        {!isCompactMode && (
+           <NetworkSelector
+            interfaces={interfaces}
+            selected={selectedInterface}
+            onSelect={setSelectedInterface}
+            disabled={isActive}
+          />
+        )}
+
+        {/* QR Zone - Morphing */}
+        <QRZone 
+          url={serverStatus?.url ?? ''} 
+          active={isActive} 
+          isCompact={isCompactMode} 
         />
 
-        {/* Zone A: QR / Receive */}
-        <QRZone url={serverStatus?.url ?? ''} active={isActive} />
-
-        {/* Action Buttons */}
+        {/* Action Buttons - Morphing */}
         <ActionButtons
           active={isActive}
           loading={loading}
+          isCompact={isCompactMode}
           onToggle={handleToggle}
           onSendToPhone={handleSendToPhone}
         />
 
-        {/* Term-Phase 2: Active Transfer HUD */}
-        <ActivePanel 
-          transfer={activeTransfer} 
-          onTest={() => simulateTransfer()}
+        {/* Active Transfer HUD - Standard Only (for now) */}
+        {!isCompactMode && (
+          <ActivePanel 
+            transfer={activeTransfer} 
+            onTest={() => simulateTransfer()}
+          />
+        )}
+
+        {/* Recent Files - Morphing */}
+        <RecentFilesZone 
+          transfers={transfers} 
+          isCompact={isCompactMode} 
         />
 
-        {/* Zone B: Recent Files */}
-        <RecentFilesZone transfers={transfers} />
       </div>
 
-      <StatusBar
-        active={isActive}
-        soundEnabled={soundEnabled}
-        onOpenFolder={handleOpenFolder}
-        onToggleSound={() => setSoundEnabled(!soundEnabled)}
-      />
+      {/* 
+        SECTION 3: FOOTER
+        - Standard Only
+      */}
+      {!isCompactMode && (
+        <StatusBar
+          active={isActive}
+          soundEnabled={soundEnabled}
+          onOpenFolder={handleOpenFolder}
+          onToggleSound={() => setSoundEnabled(!soundEnabled)}
+        />
+      )}
     </div>
   );
 }
