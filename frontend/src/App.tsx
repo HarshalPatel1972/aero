@@ -633,7 +633,7 @@ function App() {
       {/* Compact Mode View */}
       {isCompactMode ? (
         <CompactView 
-          serverStatus={serverStatus || { running: false, url: '' }}
+          serverStatus={serverStatus || { running: false, url: '', ip: '', port: '' }}
           onExpand={() => window.focus()}
         />
       ) : (
