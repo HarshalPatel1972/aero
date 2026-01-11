@@ -295,17 +295,17 @@ func (a *App) IsPhoneConnected() bool {
 	return len(clients) > 0
 }
 
-// ToggleMiniMode switches between the standard vertical layout and the Always-on-Top mini mode.
-func (a *App) ToggleMiniMode(isMini bool) {
+// SetMiniMode toggles the application between Standard and Mini configurations.
+func (a *App) SetMiniMode(enabled bool) {
 	if a.ctx == nil {
 		return
 	}
 
-	if isMini {
+	if enabled {
 		// Get primary screen to calculate position relative to Taskbar
 		screens, err := wailsruntime.ScreenGetAll(a.ctx)
 		if err != nil || len(screens) == 0 {
-			// Fallback if screen info unavailable
+			// Fallback: bottom-right 1080p
 			wailsruntime.WindowSetSize(a.ctx, 600, 120)
 			return
 		}
@@ -322,43 +322,39 @@ func (a *App) ToggleMiniMode(isMini bool) {
 			primary = &screens[0]
 		}
 
-
-		// Calculate Position: Bottom-Right, above taskbar
-		// Fallback to Bounds if WorkArea is not available or reliable without updated Wails
-		// We want 20px padding from right (600 + 20 = 620 offset)
-		// We want 20px padding from bottom (120 + 20 = 140 offset)
-		// Note: Using Bounds implies full screen size. We assume 48px taskbar for now if WorkArea fails.
-		// Precision TODO: Check Wails version for WorkArea support.
-		
-		// Calculate Position: Bottom-Right, above taskbar
-		// Fallback logic since WorkArea/Bounds might be missing in this Wails version binding
+		// MINI MODE SPEC:
+		// Width: 600, Height: 120
+		// Docked Bottom-Right (using available screen info)
 		width := 600
 		height := 120
-		
 
-		// Calculate Position: Bottom-Right
-		// Fallback to hardcoded 1080p bottom-right due to Wails struct API mismatch
-		// TODO: Fix screen API access for multi-monitor support
-		width = 600
-		height = 120
+		// Use WorkArea or Bounds to position
+		// Note: Accessing fields available in this Wails version
+		// If WorkArea is unavailable compile-time, we use Bounds/Size with manual taskbar offset
 		
-		// Assume 1080p primary monitor
-		screenWidth := 1920
-		screenHeight := 1080
+		// Strategy: Try to be as precise as possible with available structs
+		// Assuming Wails V2 standard Structs: Size {Width, Height}, X, Y
 		
-		x := screenWidth - width - 20
-		y := screenHeight - height - 60 // ~40px taskbar + 20px padding
+		screenWidth := primary.Size.Width
+		screenHeight := primary.Size.Height
+		screenX := primary.X
+		screenY := primary.Y
+
+		if screenWidth == 0 { screenWidth = 1920 }
+		if screenHeight == 0 { screenHeight = 1080 }
+
+		// Calculating Bottom-Right Dock position
+		// X = ScreenWidth - WindowWidth
+		// Y = ScreenHeight - WindowHeight - Taskbar(40)
+		x := screenX + screenWidth - width - 20
+		y := screenY + screenHeight - height - 60 
 
 		wailsruntime.WindowSetSize(a.ctx, width, height)
 		wailsruntime.WindowSetPosition(a.ctx, x, y)
 		wailsruntime.WindowSetAlwaysOnTop(a.ctx, true)
-
-
-		wailsruntime.WindowSetSize(a.ctx, width, height)
-		wailsruntime.WindowSetPosition(a.ctx, x, y)
-		wailsruntime.WindowSetAlwaysOnTop(a.ctx, true)
+		
 	} else {
-		// Restore to Standard Vertical Mode
+		// STANDARD MODE SPEC: 400x700 Centered
 		wailsruntime.WindowSetSize(a.ctx, 400, 700)
 		wailsruntime.WindowCenter(a.ctx)
 		wailsruntime.WindowSetAlwaysOnTop(a.ctx, false)
