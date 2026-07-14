@@ -8,23 +8,9 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import {
-  Power,
-  Minus,
-  X,
-  FolderOpen,
-  Wifi,
-  WifiOff,
-  ChevronDown,
-  FileCheck,
-  Loader2,
-  Volume2,
-  VolumeX,
-  Send,
-  ArrowUpRight,
-  ArrowDownLeft,
-  Zap,
-  Maximize2
+import { 
+  Wifi, FolderOpen, X, CheckCircle2,
+  Loader2, ArrowUpRight, ArrowDownLeft, Power, Send, FileCheck, History as HistoryIcon, Volume2, VolumeX, Maximize2, Minus, Square, Bug, Zap, ChevronDown, WifiOff
 } from 'lucide-react';
 import type { NetworkInterface, ServerStatus, TransferEvent } from './types';
 import { useTransfer } from './hooks/useTransfer';
@@ -41,7 +27,7 @@ function AeroLogo({ className = '' }: { className?: string }) {
       fill="none" 
       className={className}
     >
-      <rect x="32" y="32" width="448" height="448" rx="96" ry="96" fill="#050505"/>
+      <rect x="32" y="32" width="448" height="448" rx="96" ry="96" fill="#C85A27"/>
       <defs>
         <linearGradient id="aeroGrad" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor="#00E5FF"/>
@@ -50,11 +36,11 @@ function AeroLogo({ className = '' }: { className?: string }) {
       </defs>
       <path 
         d="M256 96 L384 384 L336 384 L304 304 L208 304 L176 384 L128 384 L256 96 Z M256 176 L224 272 L288 272 L256 176 Z" 
-        fill="url(#aeroGrad)"
+        fill="#ffffff"
       />
-      <path d="M128 192 L96 192" stroke="#00E5FF" strokeWidth="8" strokeLinecap="round" opacity="0.6"/>
-      <path d="M144 240 L80 240" stroke="#00E5FF" strokeWidth="6" strokeLinecap="round" opacity="0.4"/>
-      <path d="M136 288 L104 288" stroke="#00E5FF" strokeWidth="4" strokeLinecap="round" opacity="0.3"/>
+      <path d="M128 192 L96 192" stroke="#111111" strokeWidth="8" strokeLinecap="round" opacity="0.6"/>
+      <path d="M144 240 L80 240" stroke="#111111" strokeWidth="6" strokeLinecap="round" opacity="0.4"/>
+      <path d="M136 288 L104 288" stroke="#111111" strokeWidth="4" strokeLinecap="round" opacity="0.3"/>
     </svg>
   );
 }
@@ -108,17 +94,17 @@ function TitleBar({ isAutoCompact, onToggleAutoCompact }: {
     <div 
       style={{ "--wails-draggable": "drag" } as React.CSSProperties}
       className="h-11 flex items-center justify-between px-4 
-      bg-void-surface/80 backdrop-blur-glass border-b border-white/5"
+      bg-void-surface backdrop-blur-glass border-b border-main"
     >
       <div className="flex items-center gap-2.5">
         <AeroLogo className="w-5 h-5" />
-        <span className="text-sm font-semibold text-white/90 tracking-tight">Aero</span>
+        <span className="text-xl font-sans tracking-widest text-main uppercase">Aero</span>
         
         {/* Toggle Auto-Compact Mode Button */}
         <button
           onClick={() => onToggleAutoCompact(!isAutoCompact)}
           style={{ "--wails-draggable": "no-drag" } as React.CSSProperties}
-          className="p-1.5 rounded-lg hover:bg-white/5 transition-all duration-200 
+          className="p-1.5 rounded-none border-2 hover:bg-white/5 transition-all duration-200 
             active:scale-95 transform-gpu group relative"
           aria-label="Toggle Auto-Compact Mode"
           title="Toggle Auto-Compact Mode"
@@ -127,7 +113,7 @@ function TitleBar({ isAutoCompact, onToggleAutoCompact }: {
             className={`w-3.5 h-3.5 transition-all duration-200 ${
               isAutoCompact
                 ? 'text-cyan-400 fill-cyan-400' 
-                : 'text-white/20 group-hover:text-white/40'
+                : 'text-main group-hover:text-main'
             }`} 
           />
         </button>
@@ -142,22 +128,36 @@ function TitleBar({ isAutoCompact, onToggleAutoCompact }: {
             console.log("TitleBar: Minimize Clicked");
             window.runtime?.WindowMinimise();
           }}
-          className="p-2 rounded-lg hover:bg-white/5 transition-all duration-200 
+          className="p-2 rounded-none border-2 hover:bg-white/5 transition-all duration-200 
             active:scale-95 transform-gpu"
           aria-label="Minimize"
+          title="Minimize"
         >
-          <Minus className="w-4 h-4 text-white/40" />
+          <Minus className="w-4 h-4 text-main" />
+        </button>
+        <button
+          onClick={() => {
+            console.log("TitleBar: Maximize Clicked");
+            window.runtime?.WindowToggleMaximise();
+          }}
+          className="p-2 rounded-none border-2 hover:bg-white/5 transition-all duration-200 
+            active:scale-95 transform-gpu"
+          aria-label="Maximize"
+          title="Maximize"
+        >
+          <Square className="w-4 h-4 text-main" />
         </button>
         <button
           onClick={() => {
             console.log("TitleBar: Quit Clicked");
             window.runtime?.Quit();
           }}
-          className="p-2 rounded-lg hover:bg-red-500/20 transition-all duration-200 
+          className="p-2 rounded-none border-2 hover:bg-red-500/20 transition-all duration-200 
             group active:scale-95 transform-gpu"
           aria-label="Close"
+          title="Close"
         >
-          <X className="w-4 h-4 text-white/40 group-hover:text-red-400" />
+          <X className="w-4 h-4 text-main group-hover:text-red-400" />
         </button>
       </div>
     </div>
@@ -174,7 +174,7 @@ function SideHandle({ onRestore }: { onRestore: () => void }) {
       style={{ "--wails-draggable": "drag" } as React.CSSProperties}
       className="
         h-full w-12 flex-shrink-0
-        bg-zinc-900/80 border-r border-zinc-800
+        bg-void-surface border-r-2 border-main
         flex flex-col items-center justify-center gap-4
       "
     >
@@ -182,12 +182,12 @@ function SideHandle({ onRestore }: { onRestore: () => void }) {
       <div className="p-2 rounded hover:bg-white/5 transition-colors">
         <div className="grid grid-cols-2 gap-1 opacity-50">
            {/* Custom 6-dot grip pattern */}
-           <div className="w-1 h-1 rounded-full bg-white"/>
-           <div className="w-1 h-1 rounded-full bg-white"/>
-           <div className="w-1 h-1 rounded-full bg-white"/>
-           <div className="w-1 h-1 rounded-full bg-white"/>
-           <div className="w-1 h-1 rounded-full bg-white"/>
-           <div className="w-1 h-1 rounded-full bg-white"/>
+           <div className="w-1 h-1 rounded-full bg-main"/>
+           <div className="w-1 h-1 rounded-full bg-main"/>
+           <div className="w-1 h-1 rounded-full bg-main"/>
+           <div className="w-1 h-1 rounded-full bg-main"/>
+           <div className="w-1 h-1 rounded-full bg-main"/>
+           <div className="w-1 h-1 rounded-full bg-main"/>
         </div>
       </div>
 
@@ -199,8 +199,8 @@ function SideHandle({ onRestore }: { onRestore: () => void }) {
         }}
         style={{ "--wails-draggable": "no-drag" } as React.CSSProperties}
         className="
-          p-2 rounded-lg text-zinc-400 
-          hover:text-white hover:bg-white/10 
+          p-2 rounded-none border-2 text-main 
+          hover:text-main hover:bg-white/10 
           transition-all active:scale-90
         "
         title="Restore Standard View"
@@ -235,31 +235,31 @@ function NetworkSelector({
         disabled={disabled}
         className={`
           w-full flex items-center justify-between gap-3 px-4 py-3
-          bg-void-surface/50 backdrop-blur-glass
-          border border-void-border rounded-xl
+          bg-void-surface backdrop-blur-glass
+          border border-main rounded-none border-2
           text-base transition-all duration-200
-          ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-aero-cyan/30 hover:bg-void-elevated/50'}
+          ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-main border-2 hover:bg-void-surface/50'}
           active:scale-[0.99] transform-gpu
         `}
       >
         <div className="flex items-center gap-3 min-w-0">
-          <Wifi className="w-5 h-5 text-white/40 flex-shrink-0" />
+          <Wifi className="w-5 h-5 text-main flex-shrink-0" />
           <div className="text-left">
-            <p className="text-white/90 font-medium truncate">
+            <p className="text-main font-medium truncate">
               {selected ? selected.name : 'Select Network'}
             </p>
-            <p className="text-xs text-white/40">
+            <p className="text-xs text-main">
               {selected ? selected.ip : 'Choose your connection'}
             </p>
           </div>
         </div>
-        <ChevronDown className={`w-5 h-5 text-white/40 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`w-5 h-5 text-main transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
       </button>
 
       {open && !disabled && (
         <div className="absolute z-20 mt-2 w-full 
-          bg-void-surface/95 backdrop-blur-glass
-          border border-void-border rounded-xl 
+          bg-void-surface backdrop-blur-glass
+          border border-main rounded-none border-2 
           shadow-2xl shadow-black/50 overflow-hidden animate-scale-in">
           {interfaces.map((iface) => (
             <button
@@ -267,12 +267,12 @@ function NetworkSelector({
               onClick={() => { onSelect(iface); setOpen(false); }}
               className={`
                 w-full px-4 py-3 text-left transition-all duration-150
-                hover:bg-aero-cyan/10 active:scale-[0.99] transform-gpu
-                ${selected?.ip === iface.ip ? 'bg-aero-cyan/10' : ''}
+                hover:bg-[#C85A27] text-white active:scale-[0.99] transform-gpu
+                ${selected?.ip === iface.ip ? 'bg-[#C85A27] text-white' : ''}
               `}
             >
-              <p className="text-base font-medium text-white/90">{iface.name}</p>
-              <p className="text-sm text-white/40">{iface.ip}</p>
+              <p className="text-base font-medium text-main">{iface.name}</p>
+              <p className="text-sm text-main">{iface.ip}</p>
             </button>
           ))}
         </div>
@@ -293,20 +293,20 @@ function QRZone({ url, active, isCompact }: { url: string; active: boolean; isCo
     `}>
       {/* Header - Standard Only */}
       {!isCompact && (
-        <h2 className="text-lg font-bold text-white/90 tracking-tight text-center">
+        <h2 className="text-lg font-bold text-main tracking-tight text-center">
           {active ? 'Scan to Transfer Files' : 'Start Server to Connect'}
         </h2>
       )}
       
       {/* QR Container */}
       <div className={`
-        relative rounded-xl bg-white transition-all duration-300
-        ${active ? 'shadow-glow-cyan animate-breathe' : 'opacity-50'}
+        relative rounded-none border-2 bg-white transition-all duration-300
+        ${active ? 'shadow-[4px_4px_0_0_#111111] animate-breathe' : 'opacity-50'}
         ${isCompact ? 'p-1 w-20 h-20' : 'p-3 w-40 h-40'}
       `}>
         {/* Glow */}
         {active && (
-          <div className="absolute inset-0 bg-aero-cyan/30 rounded-xl blur-lg -z-10" />
+          <div className="absolute inset-0 bg-[#C85A27] text-white rounded-none border-2 blur-lg -z-10" />
         )}
         
         <QRCodeSVG
@@ -321,7 +321,7 @@ function QRZone({ url, active, isCompact }: { url: string; active: boolean; isCo
 
       {/* Subtitle - Standard Only */}
       {!isCompact && active && (
-        <p className="text-sm text-white/50 text-center">
+        <p className="text-sm text-main text-center">
           Point your phone camera at the QR code
         </p>
       )}
@@ -356,17 +356,19 @@ function ActionButtons({
         onClick={onToggle}
         disabled={loading}
         className={`
-          relative rounded-xl
+          relative rounded-none border-2
           flex items-center justify-center
           transition-all duration-300
           active:scale-95 transform-gpu
           ${active 
-            ? 'bg-aero-cyan/30 text-aero-cyan border-2 border-aero-cyan shadow-glow-cyan' 
-            : 'bg-white/10 text-white border-2 border-white/40 hover:bg-white/20 hover:border-white/60'}
+            ? 'bg-[#C85A27] text-main border-main' 
+            : 'bg-void-surface hover:bg-main hover:text-white border-main border-2 text-main shadow-[2px_2px_0_0_#111111] active:shadow-none active:translate-x-[2px] active:translate-y-[2px]'
+          }
           ${loading ? 'cursor-wait' : ''}
           ${isCompact ? 'w-12 h-12' : 'w-14 h-14'}
         `}
         aria-label={active ? 'Stop' : 'Start'}
+        title={active ? 'Stop Server' : 'Start Server'}
       >
         {loading ? (
           <Loader2 className={`${isCompact ? 'w-6 h-6' : 'w-7 h-7'} animate-spin`} />
@@ -375,7 +377,7 @@ function ActionButtons({
         )}
         
         {active && !loading && (
-          <div className="absolute inset-0 rounded-xl border-2 border-aero-cyan/40 animate-ping" />
+          <div className="absolute inset-0 rounded-none border-2 border-2 border-main border-2 animate-ping" />
         )}
       </button>
 
@@ -384,15 +386,16 @@ function ActionButtons({
         <button
           onClick={onSendToPhone}
           className="
-            w-14 h-14 rounded-xl
+            w-14 h-14 rounded-none border-2
             flex items-center justify-center
-            bg-white/10 text-white
-            border-2 border-white/40
-            hover:bg-aero-cyan/20 hover:text-aero-cyan hover:border-aero-cyan/60
+            bg-white/10 text-main
+            border-2 border-main
+            hover:bg-main hover:text-white
             transition-all duration-300
             active:scale-95 transform-gpu
           "
           aria-label="Send file to phone"
+          title="Send file to phone"
         >
           <Send className="w-6 h-6" />
         </button>
@@ -410,15 +413,15 @@ function TransferItem({ transfer }: { transfer: Transfer }) {
   
   return (
     <div className="flex items-center gap-4 px-4 py-3 
-      bg-void-surface/30 backdrop-blur-sm
-      rounded-xl border border-void-border/50
+      bg-void-surface backdrop-blur-sm
+      rounded-none border-2 border border-main
       animate-slide-up">
       {/* Icon */}
       <div className={`
-        w-10 h-10 rounded-xl flex items-center justify-center
+        w-10 h-10 rounded-none border-2 flex items-center justify-center
         ${transfer.status === 'completed' 
-          ? 'bg-aero-cyan/15 text-aero-cyan' 
-          : 'bg-void-elevated text-white/40'}
+          ? 'bg-[#C85A27] text-white text-main' 
+          : 'bg-void-surface text-main'}
       `}>
         {transfer.status === 'completed' ? (
           <FileCheck className="w-5 h-5" />
@@ -431,10 +434,10 @@ function TransferItem({ transfer }: { transfer: Transfer }) {
       
       {/* Info */}
       <div className="flex-1 min-w-0">
-        <p className="text-base font-medium text-white/90 truncate">
+        <p className="text-base font-medium text-main truncate">
           {transfer.filename}
         </p>
-        <p className="text-sm text-white/40">
+        <p className="text-sm text-main">
           {transfer.status === 'completed' && 'Complete'}
           {transfer.status === 'started' && 'Starting...'}
           {transfer.status === 'progress' && `${transfer.progress}%`}
@@ -444,8 +447,8 @@ function TransferItem({ transfer }: { transfer: Transfer }) {
 
       {/* Direction Badge */}
       <div className={`
-        flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium
-        ${isSend ? 'bg-blue-500/15 text-blue-400' : 'bg-aero-cyan/15 text-aero-cyan'}
+        flex items-center gap-1 px-2 py-1 rounded-none border-2 text-xs font-medium
+        ${isSend ? 'bg-blue-500/15 text-blue-400' : 'bg-[#C85A27] text-white text-main'}
       `}>
         {isSend ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownLeft className="w-3 h-3" />}
         {transfer.status === 'completed' 
@@ -464,10 +467,10 @@ function RecentFilesZone({ transfers, isCompact }: { transfers: Transfer[], isCo
     return (
       <div className="flex-1 ml-6 h-full flex flex-col justify-center pr-4 transition-all duration-300">
         <div className="flex flex-col">
-          <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">
+          <span className="text-xs font-bold text-main uppercase tracking-wider">
             LAST TRANSFER
           </span>
-          <span className="text-zinc-200 font-mono text-sm truncate max-w-[200px]">
+          <span className="text-main font-mono text-sm truncate max-w-[200px]">
             {lastTransfer ? lastTransfer.filename : "No transfers yet"}
           </span>
         </div>
@@ -478,14 +481,14 @@ function RecentFilesZone({ transfers, isCompact }: { transfers: Transfer[], isCo
   // Standard Mode: Full List
   return (
     <div className="flex flex-col gap-3 flex-1 min-h-0 transition-opacity duration-300">
-      <h3 className="text-sm font-semibold text-white/50 uppercase tracking-wider px-1">
+      <h3 className="text-sm font-bold text-main uppercase tracking-wider px-1">
         Recent Files
       </h3>
       
       <div className="flex-1 overflow-y-auto space-y-2 scrollbar-thin">
         {transfers.length === 0 ? (
           <div className="flex items-center justify-center h-full">
-            <p className="text-base text-white/30">No transfers yet</p>
+            <p className="text-base text-main">No transfers yet</p>
           </div>
         ) : (
           transfers.map(t => <TransferItem key={t.id} transfer={t} />)
@@ -504,26 +507,30 @@ function StatusBar({
   soundEnabled,
   onOpenFolder,
   onToggleSound,
+  setShowHistory,
+  setShowBugReport,
 }: {
   active: boolean;
   soundEnabled: boolean;
   onOpenFolder: () => void;
   onToggleSound: () => void;
+  setShowHistory?: (show: boolean) => void;
+  setShowBugReport?: (show: boolean) => void;
 }) {
   return (
     <div className="flex items-center justify-between px-4 py-3 
-      bg-void-surface/50 backdrop-blur-glass border-t border-void-border">
+      bg-void-surface backdrop-blur-glass border-t border-main">
       {/* Status */}
       <div className="flex items-center gap-2">
         {active ? (
           <>
             <div className="w-2 h-2 rounded-full bg-aero-cyan animate-glow-pulse" />
-            <span className="text-sm font-medium text-aero-cyan">Connected</span>
+            <span className="text-sm font-medium text-main">Connected</span>
           </>
         ) : (
           <>
-            <WifiOff className="w-4 h-4 text-white/30" />
-            <span className="text-sm text-white/30">Offline</span>
+            <WifiOff className="w-4 h-4 text-main" />
+            <span className="text-sm text-main">Offline</span>
           </>
         )}
       </div>
@@ -532,20 +539,37 @@ function StatusBar({
       <div className="flex items-center gap-1">
         <button
           onClick={onToggleSound}
-          className="p-2 rounded-lg hover:bg-white/5 transition-all active:scale-95 transform-gpu"
+          className="p-2 rounded-none border-2 hover:bg-white/5 transition-all active:scale-95 transform-gpu"
           aria-label="Toggle sound"
         >
           {soundEnabled 
-            ? <Volume2 className="w-4 h-4 text-white/40" />
-            : <VolumeX className="w-4 h-4 text-white/30" />
+            ? <Volume2 className="w-4 h-4 text-main" />
+            : <VolumeX className="w-4 h-4 text-main" />
           }
         </button>
         <button
-          onClick={onOpenFolder}
-          className="p-2 rounded-lg hover:bg-white/5 transition-all active:scale-95 transform-gpu"
-          aria-label="Open folder"
+          onClick={() => setShowHistory?.(true)}
+          className="p-2 rounded-none border-2 hover:bg-white/5 transition-all active:scale-95 transform-gpu"
+          aria-label="History"
+          title="History"
         >
-          <FolderOpen className="w-4 h-4 text-white/40" />
+          <HistoryIcon className="w-4 h-4 text-main" />
+        </button>
+        <button
+          onClick={onOpenFolder}
+          className="p-2 rounded-none border-2 hover:bg-white/5 transition-all active:scale-95 transform-gpu"
+          aria-label="Open folder"
+          title="Open folder"
+        >
+          <FolderOpen className="w-4 h-4 text-main" />
+        </button>
+        <button
+          onClick={() => setShowBugReport?.(true)}
+          className="p-2 rounded-none border-2 hover:bg-white/5 transition-all active:scale-95 transform-gpu"
+          aria-label="Report Bug"
+          title="Report Bug"
+        >
+          <Bug className="w-4 h-4 text-main" />
         </button>
       </div>
     </div>
@@ -561,7 +585,16 @@ function App() {
   const [selectedInterface, setSelectedInterface] = useState<NetworkInterface | null>(null);
   const [serverStatus, setServerStatus] = useState<ServerStatus | null>(null);
   const [loading, setLoading] = useState(false);
-  const [transfers, setTransfers] = useState<Transfer[]>([]);
+  const [transfers, setTransfers] = useState<Transfer[]>(() => {
+    const saved = localStorage.getItem('aero_history');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [showHistory, setShowHistory] = useState(false);
+  const [showBugReport, setShowBugReport] = useState(false);
+  const [bugMessage, setBugMessage] = useState('');
+  const [isSubmittingBug, setIsSubmittingBug] = useState(false);
+  const [bugReportStatus, setBugReportStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [bugErrorMsg, setBugErrorMsg] = useState('');
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [isDragOver, setIsDragOver] = useState(false);
   const [isCompactMode, setIsCompactMode] = useState(false);
@@ -592,6 +625,11 @@ function App() {
       window.removeEventListener('blur', handleBlur);
     };
   }, [isAutoCompact, isCompactMode]);
+
+  // Save history
+  useEffect(() => {
+    localStorage.setItem('aero_history', JSON.stringify(transfers.slice(0, 50)));
+  }, [transfers]);
 
   // Load interfaces
   useEffect(() => {
@@ -630,7 +668,7 @@ function App() {
             progress: 0,
             direction: ((e as TransferEvent & { direction?: string }).direction === 'send' ? 'send' : 'receive') as 'send' | 'receive',
             timestamp: new Date(),
-          }, ...prev].slice(0, 10);
+          }, ...prev].slice(0, 50);
         }
         return prev;
       });
@@ -734,10 +772,10 @@ function App() {
   // CRITICAL: style={{ "--wails-draggable": "no-drag" }} applied inline
   const containerClasses = `
     overflow-hidden transition-all duration-300 ease-in-out
-    ${isBigDragOver ? 'border-aero-cyan shadow-glow-cyan-lg' : 'border-zinc-800'}
+    ${isBigDragOver ? 'border-main border-2 shadow-[4px_4px_0_0_#111111]-lg' : 'border-zinc-800'}
     ${isCompactMode 
-        ? 'w-screen h-screen flex flex-row items-center bg-zinc-950 border' 
-        : 'h-full flex flex-col bg-void-black rounded-xl border-2'
+        ? 'w-screen h-screen flex flex-row items-center bg-void-black bg-[linear-gradient(rgba(0,0,0,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,0.05)_1px,transparent_1px)] bg-[size:20px_20px] rounded-none border-2 border-main' 
+        : 'h-full flex flex-col bg-void-black bg-[linear-gradient(rgba(0,0,0,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,0.05)_1px,transparent_1px)] bg-[size:20px_20px] rounded-none border-2 border-main'
     }
   `;
 
@@ -830,7 +868,141 @@ function App() {
           soundEnabled={soundEnabled}
           onOpenFolder={handleOpenFolder}
           onToggleSound={() => setSoundEnabled(!soundEnabled)}
+          setShowHistory={setShowHistory}
+          setShowBugReport={setShowBugReport}
         />
+      )}
+
+      {/* History Modal */}
+      {showHistory && (
+        <div className="absolute inset-0 bg-void-black/90 backdrop-blur-sm z-50 flex flex-col p-6 animate-in fade-in duration-200" style={{ "--wails-draggable": "no-drag" } as React.CSSProperties}>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-black uppercase tracking-wider text-main flex items-center gap-2">
+              <HistoryIcon className="w-5 h-5" /> History
+            </h2>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  setTransfers([]);
+                  localStorage.removeItem('aero_history');
+                }}
+                className="text-xs font-bold uppercase px-3 py-1.5 border-2 border-main bg-white hover:bg-main hover:text-white transition-colors shadow-[2px_2px_0_0_#111111] active:shadow-none active:translate-x-[2px] active:translate-y-[2px]"
+              >
+                Clear
+              </button>
+              <button 
+                onClick={() => setShowHistory(false)}
+                className="p-2 border-2 border-main bg-[#F4F1EA] text-[#111111] hover:bg-main hover:text-white transition-colors shadow-[2px_2px_0_0_#111111] active:shadow-none active:translate-x-[2px] active:translate-y-[2px]"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto space-y-3 pr-2 scrollbar-thin">
+            {transfers.length === 0 ? (
+              <div className="h-full flex items-center justify-center text-zinc-500 font-mono text-sm">
+                No transfer history
+              </div>
+            ) : (
+              transfers.map((t, idx) => (
+                <div key={idx} className="p-3 border-2 border-main bg-white shadow-[2px_2px_0_0_#111111] flex flex-col gap-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-sm font-bold text-[#111111] truncate">{t.filename}</span>
+                    <span className={`text-xs font-bold uppercase px-2 py-0.5 border-2 ${t.direction === 'send' ? 'bg-blue-400 text-black border-black' : 'bg-green-400 text-black border-black'}`}>
+                      {t.direction === 'send' ? 'SENT' : 'RECEIVED'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-zinc-500 font-mono">
+                    <span>{new Date(t.timestamp).toLocaleString()}</span>
+                    <span>{t.status}</span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Bug Report Modal */}
+      {showBugReport && (
+        <div className="absolute inset-0 bg-void-black/90 backdrop-blur-sm z-50 flex flex-col p-6 animate-in fade-in duration-200" style={{ "--wails-draggable": "no-drag" } as React.CSSProperties}>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-black uppercase tracking-wider text-main flex items-center gap-2">
+              <Bug className="w-5 h-5" /> Report a Bug
+            </h2>
+            <button 
+              onClick={() => setShowBugReport(false)}
+              className="p-2 border-2 border-main bg-[#F4F1EA] text-[#111111] hover:bg-main hover:text-white transition-colors shadow-[2px_2px_0_0_#111111] active:shadow-none active:translate-x-[2px] active:translate-y-[2px]"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          
+          <div className="flex-1 flex flex-col gap-4">
+            <div className="flex gap-2 flex-wrap">
+              {["Connection Issue", "Transfer Failed", "UI Bug", "Feature Request"].map(preset => (
+                <button
+                  key={preset}
+                  onClick={() => setBugMessage(prev => prev ? `${prev}\n[${preset}] ` : `[${preset}] `)}
+                  className="px-2 py-1 text-xs font-bold border-2 border-main bg-white text-main hover:bg-main hover:text-white transition-colors"
+                >
+                  {preset}
+                </button>
+              ))}
+            </div>
+            
+            {bugReportStatus === 'success' ? (
+              <div className="flex-1 flex flex-col items-center justify-center border-2 border-main bg-green-400 text-main font-bold p-4 text-center animate-in zoom-in duration-300">
+                <CheckCircle2 className="w-12 h-12 mb-2" />
+                <p className="text-xl uppercase">Bug Squashed!</p>
+                <p className="text-sm">Thanks for reporting.</p>
+              </div>
+            ) : (
+              <textarea
+                className="flex-1 w-full bg-white border-2 border-main p-3 font-mono text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#C85A27]"
+                placeholder="Describe the issue you're experiencing..."
+                value={bugMessage}
+                onChange={(e) => setBugMessage(e.target.value)}
+                disabled={isSubmittingBug}
+              />
+            )}
+            
+            {bugReportStatus === 'error' && (
+              <div className="text-red-600 text-xs font-bold bg-red-100 border-2 border-red-600 p-2">
+                Failed: {bugErrorMsg}
+              </div>
+            )}
+
+            <button
+              onClick={async () => {
+                if (!bugMessage.trim() || bugReportStatus === 'success') return;
+                setIsSubmittingBug(true);
+                setBugReportStatus('idle');
+                try {
+                  await window.go.main.App.SubmitBugReport(bugMessage.trim());
+                  setBugReportStatus('success');
+                  setTimeout(() => {
+                    setShowBugReport(false);
+                    setBugReportStatus('idle');
+                    setBugMessage('');
+                  }, 2000);
+                } catch (e) {
+                  console.error(e);
+                  setBugReportStatus('error');
+                  setBugErrorMsg("Failed to connect to reporting service. Please try again later.");
+                  setTimeout(() => setBugReportStatus('idle'), 4000);
+                } finally {
+                  setIsSubmittingBug(false);
+                }
+              }}
+              disabled={isSubmittingBug || bugReportStatus === 'success'}
+              className={`w-full py-3 text-white font-bold uppercase tracking-widest border-2 border-main shadow-[4px_4px_0_0_#111111] transition-all disabled:opacity-50 ${bugReportStatus === 'success' ? 'bg-green-600 hover:bg-green-600' : 'bg-[#C85A27] hover:bg-main active:shadow-none active:translate-x-[4px] active:translate-y-[4px]'}`}
+            >
+              {isSubmittingBug ? "Submitting..." : bugReportStatus === 'success' ? "Sent!" : "Submit Report"}
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

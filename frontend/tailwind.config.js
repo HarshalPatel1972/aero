@@ -7,21 +7,22 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Aero Brand Palette
+        // Aero Brand Palette (Neo-Brutalist)
         aero: {
-          cyan: '#00E5FF',      // Bioluminescent Cyan - Primary action
-          'cyan-dim': '#00B4D8', // Dimmed cyan for hover states
+          cyan: '#C85A27',      // Primary neo-brutalist orange/red
+          'cyan-dim': '#A6481E', // Dimmed hover state
         },
         void: {
-          black: '#050505',     // Vantablack - Deep void
-          surface: '#121212',   // Glass Charcoal
-          elevated: '#1a1a1a',  // Elevated surface
-          border: '#2a2a2a',    // Subtle borders
+          black: '#F4F1EA',     // Main background (light cream)
+          surface: '#ffffff',   // Solid white for panels
+          elevated: '#ffffff',  // Solid white
+          border: '#111111',    // Hard black borders
         },
+        main: '#111111',        // Main text color
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
-        mono: ['JetBrains Mono', 'Roboto Mono', 'monospace'],
+        sans: ['Anton', 'sans-serif'],
+        mono: ['Space Mono', 'monospace'],
       },
       animation: {
         'breathe': 'breathe 4s ease-in-out infinite',
@@ -57,8 +58,8 @@ export default {
         glass: '12px',
       },
       boxShadow: {
-        'glow-cyan': '0 0 20px rgba(0, 229, 255, 0.4)',
-        'glow-cyan-lg': '0 0 40px rgba(0, 229, 255, 0.6)',
+        'glow-cyan': '4px 4px 0 0 #111111',
+        'glow-cyan-lg': '8px 8px 0 0 #111111',
       },
     },
   },

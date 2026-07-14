@@ -27,6 +27,7 @@ declare global {
       EventsOn: (eventName: string, callback: (data: unknown) => void) => void;
       EventsOff: (eventName: string) => void;
       WindowMinimise: () => void;
+      WindowToggleMaximise: () => void;
       WindowClose: () => void;
       WindowSetAlwaysOnTop: (alwaysOnTop: boolean) => void;
       WindowSetSize: (width: number, height: number) => void;
@@ -44,6 +45,7 @@ declare global {
           OpenDownloadsFolder: () => Promise<void>;
           SendFileToPhone: () => Promise<void>;
           IsPhoneConnected: () => Promise<boolean>;
+          SubmitBugReport: (message: string) => Promise<void>;
         };
       };
     };
