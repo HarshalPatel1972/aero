@@ -24,7 +24,9 @@ package main
 
 import (
 	"embed"
+	"log"
 
+	"github.com/joho/godotenv"
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
@@ -35,6 +37,10 @@ import (
 var assets embed.FS
 
 func main() {
+	if err := godotenv.Load(); err != nil {
+		log.Println("No .env file found, continuing without it")
+	}
+
 	// Create application instance
 	app := NewApp()
 
@@ -52,10 +58,7 @@ func main() {
 
 		// Frameless for custom title bar
 		Frameless:         true,
-		DisableResize:     false, // Must be false to allow SetSize to work properly in some contexts? 
-		// Actually SetSize works with DisableResize: true usually, but Min/Max definitely block it.
-		// We can keep DisableResize: true if we just remove the Constraints.
-		// Let's remove Min/Max first.
+		DisableResize:     false, 
 		
 		StartHidden:       false,
 		HideWindowOnClose: false,
@@ -79,8 +82,8 @@ func main() {
 
 		// Windows-specific options
 		Windows: &windows.Options{
-			WebviewIsTransparent: true,
-			WindowIsTranslucent:  true,
+			WebviewIsTransparent: false,
+			WindowIsTranslucent:  false,
 			BackdropType:         windows.Mica,
 			DisableWindowIcon:    false,
 			Theme:                windows.Dark,

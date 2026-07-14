@@ -27,6 +27,7 @@ import (
 	"github.com/username/aero/internal/config"
 	"github.com/username/aero/internal/security"
 	"github.com/username/aero/internal/storage"
+	"github.com/username/aero/internal/telegram"
 )
 
 //go:embed templates/*
@@ -80,9 +81,9 @@ type Server struct {
 	clients   map[string]*PhoneClient
 	clientsMu sync.RWMutex
 	
-	// For PC -> Phone transfers
-	pendingSend    *os.File
-	pendingSendMu  sync.Mutex
+	// For PC -> Phone transfers (Direct Download)
+	downloadMap map[string]string
+	downloadMu  sync.RWMutex
 }
 
 func NewServer(cfg config.Config, storageService storage.Service) (*Server, error) {
@@ -115,9 +116,11 @@ func NewServerWithKey(cfg config.Config, storageService storage.Service, key []b
 		tempDir:          tempDir,
 		clients:          make(map[string]*PhoneClient),
 		hub:              NewHub(), // Term-Phase 5: Initialize hub
+		downloadMap:      make(map[string]string),
 	}
 
 	mux := http.NewServeMux()
+	mux.HandleFunc("/download-direct", s.handleDirectDownload)
 	mux.HandleFunc("/", s.handleIndex)
 	mux.HandleFunc("/upload", s.handleUpload)
 	mux.HandleFunc("/stream", s.handleStreamUpload) // Term-Phase 3: pooled buffer handler
@@ -132,6 +135,7 @@ func NewServerWithKey(cfg config.Config, storageService storage.Service, key []b
 	mux.HandleFunc("/api/clipboard", s.handleClipboard)
 	mux.HandleFunc("/api/folder", s.handleFolderDownload)
 	mux.HandleFunc("/api/file", s.handleFileDownload)
+	mux.HandleFunc("/api/bug", s.handleBugReport)
 
 	s.httpServer = &http.Server{
 		Addr:         ":" + cfg.Port,
@@ -193,6 +197,11 @@ func (l *tunedListener) Accept() (net.Conn, error) {
 }
 
 func (s *Server) Shutdown(ctx context.Context) error {
+	s.clientsMu.Lock()
+	for _, c := range s.clients {
+		c.conn.Close()
+	}
+	s.clientsMu.Unlock()
 	return s.httpServer.Shutdown(ctx)
 }
 
@@ -213,7 +222,7 @@ func (s *Server) GetConnectedClients() []string {
 	return ids
 }
 
-// SendFileToPhone sends a file to the first connected phone
+// SendFileToPhone sends a file to the first connected phone using Direct Download
 func (s *Server) SendFileToPhone(filePath string) error {
 	s.clientsMu.RLock()
 	if len(s.clients) == 0 {
@@ -229,7 +238,7 @@ func (s *Server) SendFileToPhone(filePath string) error {
 	}
 	s.clientsMu.RUnlock()
 
-	// Open file
+	// Open file to verify it exists and get size
 	file, err := os.Open(filePath)
 	if err != nil {
 		return err
@@ -243,76 +252,120 @@ func (s *Server) SendFileToPhone(filePath string) error {
 
 	fileName := filepath.Base(filePath)
 	fileSize := info.Size()
-	chunkSize := int64(1024 * 1024) // 1MB
-	totalChunks := int((fileSize + chunkSize - 1) / chunkSize)
 
-	log.Printf("[AERO] 📤 Sending to phone: %s (%d chunks)", fileName, totalChunks)
-	s.emitTransferEvent(TransferEvent{
-		Filename:  fileName,
-		Progress:  0,
-		Status:    "started",
-		Direction: "send",
-	})
+	log.Printf("[AERO] 📤 Sending direct download link to phone: %s", fileName)
 
-	// Send file metadata
+	// Generate secure token
+	token := fmt.Sprintf("%d-%s", time.Now().UnixNano(), fileName)
+	
+	s.downloadMu.Lock()
+	s.downloadMap[token] = filePath
+	s.downloadMu.Unlock()
+
+	// Send file metadata and download link
 	client.mu.Lock()
 	err = client.conn.WriteJSON(map[string]interface{}{
-		"type":   "file_incoming",
-		"name":   fileName,
-		"size":   fileSize,
-		"chunks": totalChunks,
+		"type": "file_direct_download",
+		"name": fileName,
+		"size": fileSize,
+		"url":  "/download-direct?token=" + token,
 	})
 	client.mu.Unlock()
 	if err != nil {
 		return err
 	}
 
-	// Send chunks
-	buf := make([]byte, chunkSize)
-	for i := 0; i < totalChunks; i++ {
-		n, err := file.Read(buf)
-		if err != nil && err != io.EOF {
-			return err
-		}
-
-		// Build message: 4 byte idx + data
-		header := make([]byte, 4)
-		binary.LittleEndian.PutUint32(header, uint32(i))
-		msg := append(header, buf[:n]...)
-
-		client.mu.Lock()
-		err = client.conn.WriteMessage(websocket.BinaryMessage, msg)
-		client.mu.Unlock()
-		if err != nil {
-			return err
-		}
-
-		progress := float64(i+1) / float64(totalChunks) * 100
-		s.emitTransferEvent(TransferEvent{
-			Filename:  fileName,
-			Progress:  progress,
-			Status:    "sending",
-			Direction: "send",
-		})
-	}
-
-	// Send completion
-	client.mu.Lock()
-	client.conn.WriteJSON(map[string]interface{}{
-		"type": "file_complete",
-		"name": fileName,
-	})
-	client.mu.Unlock()
-
-	log.Printf("[AERO] ✓ Sent to phone: %s", fileName)
 	s.emitTransferEvent(TransferEvent{
 		Filename:  fileName,
 		Progress:  100,
-		Status:    "completed",
+		Status:    "ready for download",
 		Direction: "send",
 	})
 
 	return nil
+}
+
+func (s *Server) handleDirectDownload(w http.ResponseWriter, r *http.Request) {
+	token := r.URL.Query().Get("token")
+	if token == "" {
+		http.Error(w, "Missing token", http.StatusBadRequest)
+		return
+	}
+
+	s.downloadMu.RLock()
+	filePath, exists := s.downloadMap[token]
+	s.downloadMu.RUnlock()
+
+	if !exists {
+		http.Error(w, "Invalid or expired token", http.StatusNotFound)
+		return
+	}
+
+	// Suggest filename for download
+	fileName := filepath.Base(filePath)
+	w.Header().Set("Content-Disposition", "attachment; filename=\""+fileName+"\"")
+
+	// Open the file
+	file, err := os.Open(filePath)
+	if err != nil {
+		http.Error(w, "File not found", http.StatusNotFound)
+		return
+	}
+	defer file.Close()
+
+	stat, err := file.Stat()
+	if err != nil {
+		http.Error(w, "Could not stat file", http.StatusInternalServerError)
+		return
+	}
+
+	// Create a proxy reader to emit progress
+	proxy := &progressReader{
+		file:     file,
+		size:     stat.Size(),
+		server:   s,
+		filename: fileName,
+		lastEmit: time.Now(),
+	}
+
+	http.ServeContent(w, r, fileName, stat.ModTime(), proxy)
+}
+
+// progressReader wraps an os.File to emit progress events
+type progressReader struct {
+	file     *os.File
+	size     int64
+	server   *Server
+	filename string
+	read     int64
+	lastEmit time.Time
+}
+
+func (pr *progressReader) Read(p []byte) (n int, err error) {
+	n, err = pr.file.Read(p)
+	if n > 0 {
+		pr.read += int64(n)
+		now := time.Now()
+		if now.Sub(pr.lastEmit) > 100*time.Millisecond || pr.read == pr.size {
+			progress := float64(pr.read) / float64(pr.size) * 100
+			status := "progress"
+			if pr.read == pr.size {
+				status = "completed"
+			}
+			pr.server.emitTransferEvent(TransferEvent{
+				Filename:  pr.filename,
+				Progress:  progress,
+				Status:    status,
+				Direction: "send",
+			})
+			pr.lastEmit = now
+		}
+	}
+	return n, err
+}
+
+func (pr *progressReader) Seek(offset int64, whence int) (int64, error) {
+	return pr.file.Seek(offset, whence)
 }
 
 func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
@@ -537,4 +590,28 @@ func getChunkFiles(dir string) []int {
 	}
 	sort.Ints(chunks)
 	return chunks
+}
+
+func (s *Server) handleBugReport(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		Message string `json:"message"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Bad request", http.StatusBadRequest)
+		return
+	}
+
+	if err := telegram.SendBugReport(req.Message); err != nil {
+		log.Printf("[AERO] Telegram bug report failed: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }
