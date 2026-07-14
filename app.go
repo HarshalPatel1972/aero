@@ -37,6 +37,7 @@ import (
 	"github.com/username/aero/internal/security"
 	"github.com/username/aero/internal/server"
 	"github.com/username/aero/internal/storage"
+	"github.com/username/aero/internal/telegram"
 	"github.com/username/aero/pkg/networking"
 )
 
@@ -249,6 +250,11 @@ func (a *App) OpenDownloadsFolder() error {
 	}
 
 	return cmd.Start()
+}
+
+// SubmitBugReport sends a bug report via Telegram
+func (a *App) SubmitBugReport(message string) error {
+	return telegram.SendBugReport(message)
 }
 
 // onTransferEvent is called by the server when transfer events occur.

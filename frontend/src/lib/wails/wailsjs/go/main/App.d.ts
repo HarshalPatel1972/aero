@@ -17,3 +17,5 @@ export function SetMiniMode(arg1:boolean):Promise<void>;
 export function StartServer(arg1:string):Promise<void>;
 
 export function StopServer():Promise<void>;
+
+export function SubmitBugReport(arg1:string):Promise<void>;
