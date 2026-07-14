@@ -22,6 +22,7 @@ Phone ↔ PC • Encrypted • Blazing Fast
 *   **📱 Universal Client**: Works on **any** device (iOS, Android, Mac, Linux) via browser. No app install required on the phone.
 *   **📎 Universal Clipboard**: Instantly share text/links between PC and Phone.
 *   **✨ Modern UI**: Glassmorphism design, "Mini-Mode" for unobtrusive multitasking, and fluid animations.
+*   **🐛 Built-in Bug Reporter**: Instantly shoot bug reports with pre-filled tags directly to the developer's Telegram via an integrated E2E secure reporting system.
 *   **📦 Portable or Installed**: Available as a standard Windows Installer (`.exe`) or portable binary.
 
 ---
