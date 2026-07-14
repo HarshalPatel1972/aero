@@ -6,16 +6,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#050505">
     <title>Aero</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-void: #050505;
-            --bg-surface: rgba(26, 26, 26, 0.8);
-            --border: rgba(255, 255, 255, 0.1);
-            --cyan: #00E5FF;
-            --cyan-glow: rgba(0, 229, 255, 0.3);
-            --text: rgba(255, 255, 255, 0.9);
-            --text-muted: rgba(255, 255, 255, 0.5);
+            --bg-base: #F4F1EA;
+            --grid-color: rgba(0, 0, 0, 0.05);
+            --primary: #C85A27;
+            --text-main: #111111;
+            --border-width: 2px;
+            --shadow-offset: 4px;
         }
 
         * {
@@ -24,94 +23,87 @@
             box-sizing: border-box;
         }
 
-        html,
-        body {
+        html, body {
             width: 100%;
             height: 100%;
             overflow: hidden;
-            background: var(--bg-void);
-            font-family: 'Inter', -apple-system, sans-serif;
-            -webkit-font-smoothing: antialiased;
-            color: var(--text);
+            background-color: var(--bg-base);
+            /* Subtle Grid Background */
+            background-image: 
+                linear-gradient(var(--grid-color) 1px, transparent 1px),
+                linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+            background-size: 20px 20px;
+            font-family: 'Space Mono', monospace;
+            color: var(--text-main);
+            position: relative;
         }
 
         .app {
             display: flex;
             flex-direction: column;
             height: 100%;
-            padding: 16px;
-            padding-top: calc(env(safe-area-inset-top, 16px) + 24px);
-            padding-bottom: env(safe-area-inset-bottom, 16px);
+            padding: 24px;
+            padding-top: calc(env(safe-area-inset-top, 24px) + 24px);
+            padding-bottom: env(safe-area-inset-bottom, 24px);
         }
 
-        /* Title Bar */
+        /* Brutalist Title Bar */
         .title-bar {
             display: flex;
             align-items: center;
             justify-content: space-between;
             padding: 12px 16px;
-            background: var(--bg-surface);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            margin-bottom: 16px;
+            background: #fff;
+            border: var(--border-width) solid var(--text-main);
+            box-shadow: var(--shadow-offset) var(--shadow-offset) 0 0 var(--text-main);
+            margin-bottom: 40px;
         }
 
         .logo {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 12px;
         }
 
         .logo-icon {
-            width: 24px;
-            height: 24px;
-            background: linear-gradient(135deg, var(--cyan), #00B8D4);
-            border-radius: 6px;
+            width: 32px;
+            height: 32px;
+            background: var(--primary);
+            border: var(--border-width) solid var(--text-main);
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: 700;
-            font-size: 14px;
-            color: #000;
+            font-size: 18px;
+            color: #fff;
+            font-family: 'Anton', sans-serif;
         }
 
         .logo-text {
-            font-weight: 600;
-            font-size: 15px;
+            font-family: 'Anton', sans-serif;
+            font-size: 24px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
         }
 
         .connection-badge {
             display: flex;
             align-items: center;
-            gap: 6px;
-            padding: 6px 10px;
-            background: rgba(0, 229, 255, 0.1);
-            border: 1px solid rgba(0, 229, 255, 0.3);
-            border-radius: 20px;
-            font-size: 11px;
-            font-weight: 600;
-            color: var(--cyan);
+            gap: 8px;
+            padding: 6px 12px;
+            background: #fff;
+            border: var(--border-width) solid var(--text-main);
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-main);
+            text-transform: uppercase;
         }
 
         .connection-dot {
-            width: 6px;
-            height: 6px;
-            background: var(--cyan);
-            border-radius: 50%;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-
-            0%,
-            100% {
-                opacity: 1;
-            }
-
-            50% {
-                opacity: 0.5;
-            }
+            width: 8px;
+            height: 8px;
+            background: var(--primary);
+            border: 1px solid var(--text-main);
         }
 
         /* Main Content */
@@ -121,185 +113,241 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 20px;
+            gap: 24px;
         }
 
         .main-title {
-            font-size: 18px;
-            font-weight: 700;
+            font-family: 'Anton', sans-serif;
+            font-size: 36px;
             text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 2px;
         }
 
-        /* Action Button */
+        /* Brutalist Button */
         .action-btn {
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 10px;
+            gap: 12px;
             width: 100%;
-            max-width: 280px;
+            max-width: 300px;
             padding: 16px 24px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            border-radius: 16px;
-            color: var(--text);
-            font-size: 15px;
-            font-weight: 600;
+            background: var(--primary);
+            border: var(--border-width) solid var(--text-main);
+            box-shadow: var(--shadow-offset) var(--shadow-offset) 0 0 var(--text-main);
+            color: #fff;
+            font-family: 'Space Mono', monospace;
+            font-size: 16px;
+            font-weight: 700;
+            text-transform: uppercase;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: transform 0.1s, box-shadow 0.1s;
         }
 
-        .action-btn:hover,
         .action-btn:active {
-            background: rgba(0, 229, 255, 0.1);
-            border-color: var(--cyan);
-            color: var(--cyan);
+            transform: translate(var(--shadow-offset), var(--shadow-offset));
+            box-shadow: 0 0 0 0 var(--text-main);
         }
 
-        .action-btn svg {
-            width: 20px;
-            height: 20px;
-        }
-
-        /* Transfer Panel */
-        .transfer-panel {
+        /* Panels */
+        .transfer-panel, .receive-panel {
             width: 100%;
             max-width: 320px;
-            padding: 16px;
-            background: var(--bg-surface);
-            backdrop-filter: blur(20px);
-            border: 1px solid var(--border);
-            border-radius: 16px;
+            padding: 20px;
+            background: #fff;
+            border: var(--border-width) solid var(--text-main);
+            box-shadow: var(--shadow-offset) var(--shadow-offset) 0 0 var(--text-main);
             display: none;
+            flex-direction: column;
         }
 
-        .transfer-panel.active {
-            display: block;
+        .transfer-panel.active, .receive-panel.active {
+            display: flex;
         }
 
         .transfer-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-bottom: 12px;
+            margin-bottom: 16px;
+            border-bottom: var(--border-width) solid var(--text-main);
+            padding-bottom: 12px;
         }
 
         .transfer-info {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
         }
 
         .transfer-icon {
-            width: 32px;
-            height: 32px;
-            background: rgba(0, 229, 255, 0.2);
-            border-radius: 8px;
+            width: 36px;
+            height: 36px;
+            background: #fff;
+            border: var(--border-width) solid var(--text-main);
             display: flex;
             align-items: center;
             justify-content: center;
         }
 
-        .transfer-icon svg {
-            width: 16px;
-            height: 16px;
-            color: var(--cyan);
-        }
-
         .transfer-name {
-            font-size: 13px;
-            font-weight: 600;
-            max-width: 150px;
+            font-size: 14px;
+            font-weight: 700;
+            max-width: 140px;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
 
         .transfer-status {
-            font-size: 11px;
-            color: var(--text-muted);
+            font-size: 12px;
+            font-weight: 400;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .preset-btn {
+            background: #fff; border: 2px solid #111; font-family: 'Space Mono'; font-size: 12px; font-weight: bold; padding: 4px 8px; cursor: pointer; transition: all 0.2s;
+        }
+        .preset-btn:active {
+            background: #111; color: #fff;
         }
 
         .live-badge {
             display: flex;
             align-items: center;
-            gap: 4px;
-            font-size: 10px;
-            font-weight: 600;
-            color: var(--cyan);
+            gap: 6px;
+            font-size: 12px;
+            font-weight: 700;
             text-transform: uppercase;
         }
-
         .live-badge::before {
             content: '';
-            width: 6px;
-            height: 6px;
-            background: var(--cyan);
-            border-radius: 50%;
-            animation: pulse 1s infinite;
+            width: 8px;
+            height: 8px;
+            background: var(--primary);
+            border: 1px solid var(--text-main);
+            animation: pulse 1s infinite alternate;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            100% { opacity: 0.5; }
+        }
+
+        .progress-bar {
+            height: 12px;
+            background: #fff;
+            border: var(--border-width) solid var(--text-main);
+            margin-bottom: 16px;
+            position: relative;
+        }
+        .progress-fill {
+            height: 100%;
+            background: var(--primary);
+            width: 0%;
+            transition: width 0.3s;
+            border-right: var(--border-width) solid var(--text-main);
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+        .stat {
+            text-align: left;
+        }
+        .stat-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+        .stat-value {
+            font-size: 14px;
+            font-weight: 700;
         }
 
         .cancel-btn {
             width: 100%;
-            padding: 10px 0 4px 0;
-            margin-top: 8px;
-            font-size: 11px;
-            font-weight: 500;
-            color: rgba(255, 255, 255, 0.25);
-            background: none;
-            border: none;
-            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 12px;
+            background: #fff;
+            border: var(--border-width) solid var(--text-main);
+            box-shadow: 2px 2px 0 0 var(--text-main);
+            font-family: 'Space Mono', monospace;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
             cursor: pointer;
-            transition: color 0.2s;
+        }
+        .cancel-btn:active {
+            transform: translate(2px, 2px);
+            box-shadow: 0 0 0 0 var(--text-main);
         }
 
-        .cancel-btn:hover {
-            color: #ef4444;
-        }
-
-        /* Progress Bar */
-        .progress-bar {
-            height: 6px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 3px;
-            overflow: hidden;
-            margin-bottom: 12px;
-        }
-
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, var(--cyan), #00B8D4);
-            border-radius: 3px;
-            transition: width 0.3s;
-            box-shadow: 0 0 10px var(--cyan-glow);
-        }
-
-        /* Stats */
-        .stats-row {
-            display: flex;
-            justify-content: space-between;
-        }
-
-        .stat {
+        /* Receive Panel */
+        .receive-panel {
+            align-items: center;
             text-align: center;
         }
-
-        .stat-label {
-            font-size: 9px;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            color: var(--text-muted);
-            margin-bottom: 2px;
+        .receive-icon-wrapper {
+            width: 64px;
+            height: 64px;
+            background: #fff;
+            border: var(--border-width) solid var(--text-main);
+            box-shadow: 4px 4px 0 0 var(--text-main);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 24px;
         }
-
-        .stat-value {
-            font-size: 13px;
+        .receive-icon-wrapper svg {
+            width: 32px;
+            height: 32px;
+            color: var(--text-main);
+        }
+        .receive-filename {
+            font-family: 'Anton', sans-serif;
+            font-size: 24px;
+            margin-bottom: 8px;
+            word-break: break-all;
+        }
+        .receive-message {
+            font-size: 12px;
+            margin-bottom: 24px;
+            border: var(--border-width) solid var(--text-main);
+            padding: 8px;
+            background: #fff;
+        }
+        .receive-btn {
+            width: 100%;
+            padding: 14px;
+            background: var(--primary);
+            color: #fff;
+            border: var(--border-width) solid var(--text-main);
+            box-shadow: var(--shadow-offset) var(--shadow-offset) 0 0 var(--text-main);
+            font-family: 'Space Mono', monospace;
             font-weight: 700;
-            font-family: 'JetBrains Mono', monospace;
+            text-transform: uppercase;
+            text-decoration: none;
+            cursor: pointer;
+            margin-bottom: 12px;
+            display: inline-block;
         }
-
-        .stat-value.highlight {
-            color: var(--cyan);
+        .receive-btn:active {
+            transform: translate(var(--shadow-offset), var(--shadow-offset));
+            box-shadow: 0 0 0 0 var(--text-main);
+        }
+        .receive-done-btn {
+            background: #fff;
+            color: var(--text-main);
         }
 
         /* Recent Files */
@@ -307,93 +355,81 @@
             width: 100%;
             max-width: 320px;
         }
-
         .recents-header {
-            font-size: 11px;
+            font-size: 12px;
+            font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.1em;
-            color: var(--text-muted);
-            margin-bottom: 10px;
-            text-align: center;
+            margin-bottom: 12px;
+            border-bottom: var(--border-width) solid var(--text-main);
+            padding-bottom: 4px;
         }
-
         .recent-item {
             display: flex;
             align-items: center;
-            gap: 10px;
-            padding: 10px 12px;
-            background: var(--bg-surface);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            margin-bottom: 6px;
+            gap: 12px;
+            padding: 12px;
+            background: #fff;
+            border: var(--border-width) solid var(--text-main);
+            box-shadow: 2px 2px 0 0 var(--text-main);
+            margin-bottom: 12px;
+            transition: transform 0.1s, box-shadow 0.1s;
         }
-
         .recent-icon {
-            width: 28px;
-            height: 28px;
-            background: rgba(0, 229, 255, 0.1);
-            border-radius: 6px;
+            width: 32px;
+            height: 32px;
+            background: #fff;
+            border: var(--border-width) solid var(--text-main);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 12px;
+            font-weight: 700;
         }
-
         .recent-name {
             flex: 1;
             font-size: 12px;
-            font-weight: 500;
+            font-weight: 700;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
-
         .recent-badge {
-            font-size: 9px;
-            padding: 3px 6px;
-            border-radius: 4px;
+            font-size: 10px;
+            padding: 2px 6px;
+            border: 1px solid var(--text-main);
+            background: var(--primary);
+            color: #fff;
+            font-weight: 700;
             text-transform: uppercase;
-            font-weight: 600;
-            background: rgba(0, 229, 255, 0.1);
-            color: var(--cyan);
         }
 
         /* Stats Banner */
         .stats-banner {
             width: 100%;
             max-width: 320px;
-            padding: 10px 16px;
-            background: rgba(16, 185, 129, 0.15);
-            border: 1px solid #10b981;
-            border-radius: 12px;
+            padding: 12px;
+            background: #fff;
+            border: var(--border-width) solid var(--text-main);
+            box-shadow: var(--shadow-offset) var(--shadow-offset) 0 0 var(--text-main);
             margin-bottom: 20px;
-            opacity: 0;
-            transform: translateY(-10px);
-            transition: all 0.3s ease;
+            display: none;
         }
-
         .stats-banner.show {
-            opacity: 1;
-            transform: translateY(0);
+            display: block;
         }
-
         .stats-banner-content {
-            font-size: 15px;
-            font-weight: 600;
-            font-family: 'JetBrains Mono', monospace;
-            color: #10b981;
+            font-size: 14px;
+            font-weight: 700;
             text-align: center;
+            color: var(--primary);
         }
 
         /* Bottom Bar */
         .bottom-bar {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            padding: 12px;
-            color: var(--text-muted);
-            font-size: 11px;
+            text-align: center;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-top: auto;
         }
 
         input[type="file"] {
@@ -410,9 +446,40 @@
                 <div class="logo-icon">A</div>
                 <span class="logo-text">Aero</span>
             </div>
-            <div class="connection-badge">
-                <div class="connection-dot"></div>
-                Connected
+            <div style="display: flex; gap: 8px;">
+                <button class="connection-badge" id="bugReportBtn" style="cursor: pointer; background: var(--bg-base); transition: all 0.2s;" onmouseover="this.style.background='var(--primary)'; this.style.color='#fff'" onmouseout="this.style.background='var(--bg-base)'; this.style.color='var(--text-main)'">
+                    <svg style="width: 14px; height: 14px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                    </svg>
+                    Bug
+                </button>
+                <!-- Bug Report Modal -->
+            <div id="bugModal" style="display: none; position: fixed; inset: 0; background: rgba(244,241,234,0.95); z-index: 100; flex-direction: column; padding: 24px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; border-bottom: 2px solid #111; padding-bottom: 12px;">
+                    <h2 style="font-family: 'Anton'; text-transform: uppercase; font-size: 24px;">Report a Bug</h2>
+                    <button id="closeBugBtn" style="background: none; border: none; cursor: pointer;">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </div>
+                <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px;">
+                    <button class="preset-btn" onclick="document.getElementById('bugText').value += (document.getElementById('bugText').value ? '\n' : '') + '[Connection Issue] '">Connection Issue</button>
+                    <button class="preset-btn" onclick="document.getElementById('bugText').value += (document.getElementById('bugText').value ? '\n' : '') + '[Transfer Failed] '">Transfer Failed</button>
+                    <button class="preset-btn" onclick="document.getElementById('bugText').value += (document.getElementById('bugText').value ? '\n' : '') + '[UI Bug] '">UI Bug</button>
+                    <button class="preset-btn" onclick="document.getElementById('bugText').value += (document.getElementById('bugText').value ? '\n' : '') + '[Feature Request] '">Feature</button>
+                </div>
+                
+                <div id="bugSuccessState" style="display: none; flex: 1; flex-direction: column; align-items: center; justify-content: center; background: #4ade80; border: 2px solid #111; margin-bottom: 24px; animation: scaleIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                    <h3 style="font-family: 'Anton'; margin-top: 16px; font-size: 20px; color: #111; letter-spacing: 1px;">BUG SQUASHED!</h3>
+                </div>
+
+                <textarea id="bugText" style="flex: 1; width: 100%; border: 2px solid #111; padding: 12px; font-family: 'Space Mono'; font-size: 14px; margin-bottom: 24px; resize: none;" placeholder="Describe the issue..."></textarea>
+                <button id="submitBugBtn" class="action-btn" style="margin-bottom: 0;">Submit Report</button>
+            </div>
+                <div class="connection-badge">
+                    <div class="connection-dot" id="connDot"></div>
+                    <span id="connText">Connected</span>
+                </div>
             </div>
         </div>
 
@@ -473,13 +540,32 @@
                 <button class="cancel-btn" id="cancelBtn">Tap to cancel</button>
             </div>
 
+            <!-- Receive Panel -->
+            <div class="receive-panel" id="receivePanel">
+                <div class="receive-icon-wrapper">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                </div>
+                <div class="receive-filename" id="receiveFilename">file.zip</div>
+                <div class="receive-message">
+                    <strong>Download Started!</strong><br/>
+                    Check your notifications or downloads folder for progress.
+                </div>
+                <a href="#" class="receive-btn" id="receiveBtn">Download Manually</a>
+                <button class="receive-btn receive-done-btn" id="receiveDoneBtn">Done</button>
+            </div>
+
             <!-- Recent Files -->
             <div class="recents" id="recents"></div>
-        </div>
-
-        <!-- Bottom Bar -->
-        <div class="bottom-bar">
-            <span>Connected to PC</span>
+            <!-- Bottom Stats (Recent Files zone) -->
+            <div class="bottom-bar">
+                <div id="recentFilesContainer" style="display: flex; flex-direction: column; gap: 8px;">
+                    <!-- Recent items will be inserted here -->
+                </div>
+            </div>
         </div>
     </div>
 
@@ -576,14 +662,20 @@
                 ws.binaryType = 'arraybuffer'; // Critical for binary handling
 
                 ws.onopen = () => {
-                    document.querySelector('.bottom-bar span').textContent = 'Connected to PC';
-                    document.querySelector('.bottom-bar span').style.color = '#22d3ee'; // Aero Cyan
+                    const txt = document.getElementById('connText');
+                    const dot = document.getElementById('connDot');
+                    if(txt) txt.textContent = 'Connected';
+                    if(dot) dot.style.background = '#10b981'; // Green
+                    if(dot) dot.style.animation = 'pulse 1s infinite alternate';
                     haptics.success();
                 };
 
                 ws.onclose = () => {
-                    document.querySelector('.bottom-bar span').textContent = 'Disconnected...';
-                    document.querySelector('.bottom-bar span').style.color = '#ef4444'; // Red
+                    const txt = document.getElementById('connText');
+                    const dot = document.getElementById('connDot');
+                    if(txt) txt.textContent = 'Disconnected';
+                    if(dot) dot.style.background = '#ef4444'; // Red
+                    if(dot) dot.style.animation = 'none';
                     setTimeout(connectWebSocket, 2000);
                 };
 
@@ -620,6 +712,30 @@
                     // Finish & Save
                     transferComplete(msg.name, true);
                     saveFile(msg.name);
+                }
+                else if (msg.type === 'file_direct_download') {
+                    // PC to Phone Direct Download
+                    mainTitle.textContent = 'Incoming File...';
+                    
+                    receiveFilename.textContent = msg.name;
+                    receiveBtn.href = msg.url;
+                    receiveBtn.download = msg.name;
+                    
+                    // Show the dedicated receive panel
+                    haptics.tick();
+                    transferPanel.classList.remove('active');
+                    selectBtn.style.display = 'none';
+                    receivePanel.classList.add('active');
+                    
+                    // Trigger native browser download
+                    const a = document.createElement('a');
+                    a.href = msg.url;
+                    a.download = msg.name;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    
+                    addRecentFile(msg.name, 'received');
                 }
             }
 
@@ -687,6 +803,13 @@
                     activeXHR = null;
                     transferCancelled();
                 }
+            });
+
+            // Receive Done button
+            receiveDoneBtn.addEventListener('click', () => {
+                receivePanel.classList.remove('active');
+                selectBtn.style.display = 'flex';
+                mainTitle.textContent = 'Send Files to PC';
             });
 
             function transferCancelled() {
@@ -905,6 +1028,65 @@
                 error: () => navigator.vibrate?.([300]),
             };
         })();
+        
+        // Bug Report Logic
+        const bugModal = document.getElementById('bugModal');
+        const bugReportBtn = document.getElementById('bugReportBtn');
+        const closeBugBtn = document.getElementById('closeBugBtn');
+        const submitBugBtn = document.getElementById('submitBugBtn');
+        const bugText = document.getElementById('bugText');
+
+        bugReportBtn.addEventListener('click', () => {
+            bugModal.style.display = 'flex';
+        });
+
+        closeBugBtn.addEventListener('click', () => {
+            bugModal.style.display = 'none';
+        });
+
+        submitBugBtn.addEventListener('click', async () => {
+            const message = bugText.value.trim();
+            if (!message) return;
+            
+            submitBugBtn.innerText = 'Sending...';
+            submitBugBtn.disabled = true;
+            
+            try {
+                const res = await fetch('/api/bug', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message })
+                });
+                if (res.ok) {
+                    bugText.style.display = 'none';
+                    document.getElementById('bugSuccessState').style.display = 'flex';
+                    submitBugBtn.innerText = 'SENT!';
+                    submitBugBtn.style.background = '#4ade80';
+                    submitBugBtn.style.color = '#111';
+                    
+                    setTimeout(() => {
+                        bugModal.style.display = 'none';
+                        bugText.style.display = 'block';
+                        document.getElementById('bugSuccessState').style.display = 'none';
+                        submitBugBtn.innerText = 'Submit Report';
+                        submitBugBtn.style.background = '';
+                        submitBugBtn.style.color = '';
+                        bugText.value = '';
+                        submitBugBtn.disabled = false;
+                    }, 2000);
+                    return; // Wait for timeout before enabling
+                } else {
+                    alert('Failed to connect to reporting service. Please try again later.');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Failed to connect to reporting service. Please check your connection.');
+            }
+            
+            submitBugBtn.innerText = 'Submit Report';
+            submitBugBtn.disabled = false;
+        });
+
     </script>
 </body>
 
