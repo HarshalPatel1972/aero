@@ -9,8 +9,8 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { 
-  Wifi, FolderOpen, X, CheckCircle2,
-  Loader2, ArrowUpRight, ArrowDownLeft, Power, Send, FileCheck, History as HistoryIcon, Volume2, VolumeX, Maximize2, Minus, Square, Bug, Zap, ChevronDown, WifiOff
+  Wifi, FolderOpen, X,
+  Loader2, ArrowUpRight, ArrowDownLeft, Power, Send, FileCheck, History as HistoryIcon, Volume2, VolumeX, Maximize2, Minus, Square, Zap, ChevronDown, WifiOff
 } from 'lucide-react';
 import type { NetworkInterface, ServerStatus, TransferEvent } from './types';
 import { useTransfer } from './hooks/useTransfer';
@@ -508,14 +508,12 @@ function StatusBar({
   onOpenFolder,
   onToggleSound,
   setShowHistory,
-  setShowBugReport,
 }: {
   active: boolean;
   soundEnabled: boolean;
   onOpenFolder: () => void;
   onToggleSound: () => void;
   setShowHistory?: (show: boolean) => void;
-  setShowBugReport?: (show: boolean) => void;
 }) {
   return (
     <div className="flex items-center justify-between px-4 py-3 
@@ -563,14 +561,6 @@ function StatusBar({
         >
           <FolderOpen className="w-4 h-4 text-main" />
         </button>
-        <button
-          onClick={() => setShowBugReport?.(true)}
-          className="p-2 rounded-none border-2 hover:bg-white/5 transition-all active:scale-95 transform-gpu"
-          aria-label="Report Bug"
-          title="Report Bug"
-        >
-          <Bug className="w-4 h-4 text-main" />
-        </button>
       </div>
     </div>
   );
@@ -590,11 +580,6 @@ function App() {
     return saved ? JSON.parse(saved) : [];
   });
   const [showHistory, setShowHistory] = useState(false);
-  const [showBugReport, setShowBugReport] = useState(false);
-  const [bugMessage, setBugMessage] = useState('');
-  const [isSubmittingBug, setIsSubmittingBug] = useState(false);
-  const [bugReportStatus, setBugReportStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  const [bugErrorMsg, setBugErrorMsg] = useState('');
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [isDragOver, setIsDragOver] = useState(false);
   const [isCompactMode, setIsCompactMode] = useState(false);
@@ -869,7 +854,6 @@ function App() {
           onOpenFolder={handleOpenFolder}
           onToggleSound={() => setSoundEnabled(!soundEnabled)}
           setShowHistory={setShowHistory}
-          setShowBugReport={setShowBugReport}
         />
       )}
 
@@ -924,86 +908,6 @@ function App() {
         </div>
       )}
 
-      {/* Bug Report Modal */}
-      {showBugReport && (
-        <div className="absolute inset-0 bg-void-black/90 backdrop-blur-sm z-50 flex flex-col p-6 animate-in fade-in duration-200" style={{ "--wails-draggable": "no-drag" } as React.CSSProperties}>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-black uppercase tracking-wider text-main flex items-center gap-2">
-              <Bug className="w-5 h-5" /> Report a Bug
-            </h2>
-            <button 
-              onClick={() => setShowBugReport(false)}
-              className="p-2 border-2 border-main bg-[#F4F1EA] text-[#111111] hover:bg-main hover:text-white transition-colors shadow-[2px_2px_0_0_#111111] active:shadow-none active:translate-x-[2px] active:translate-y-[2px]"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-          
-          <div className="flex-1 flex flex-col gap-4">
-            <div className="flex gap-2 flex-wrap">
-              {["Connection Issue", "Transfer Failed", "UI Bug", "Feature Request"].map(preset => (
-                <button
-                  key={preset}
-                  onClick={() => setBugMessage(prev => prev ? `${prev}\n[${preset}] ` : `[${preset}] `)}
-                  className="px-2 py-1 text-xs font-bold border-2 border-main bg-white text-main hover:bg-main hover:text-white transition-colors"
-                >
-                  {preset}
-                </button>
-              ))}
-            </div>
-            
-            {bugReportStatus === 'success' ? (
-              <div className="flex-1 flex flex-col items-center justify-center border-2 border-main bg-green-400 text-main font-bold p-4 text-center animate-in zoom-in duration-300">
-                <CheckCircle2 className="w-12 h-12 mb-2" />
-                <p className="text-xl uppercase">Bug Squashed!</p>
-                <p className="text-sm">Thanks for reporting.</p>
-              </div>
-            ) : (
-              <textarea
-                className="flex-1 w-full bg-white border-2 border-main p-3 font-mono text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#C85A27]"
-                placeholder="Describe the issue you're experiencing..."
-                value={bugMessage}
-                onChange={(e) => setBugMessage(e.target.value)}
-                disabled={isSubmittingBug}
-              />
-            )}
-            
-            {bugReportStatus === 'error' && (
-              <div className="text-red-600 text-xs font-bold bg-red-100 border-2 border-red-600 p-2">
-                Failed: {bugErrorMsg}
-              </div>
-            )}
-
-            <button
-              onClick={async () => {
-                if (!bugMessage.trim() || bugReportStatus === 'success') return;
-                setIsSubmittingBug(true);
-                setBugReportStatus('idle');
-                try {
-                  await window.go.main.App.SubmitBugReport(bugMessage.trim());
-                  setBugReportStatus('success');
-                  setTimeout(() => {
-                    setShowBugReport(false);
-                    setBugReportStatus('idle');
-                    setBugMessage('');
-                  }, 2000);
-                } catch (e) {
-                  console.error(e);
-                  setBugReportStatus('error');
-                  setBugErrorMsg("Failed to connect to reporting service. Please try again later.");
-                  setTimeout(() => setBugReportStatus('idle'), 4000);
-                } finally {
-                  setIsSubmittingBug(false);
-                }
-              }}
-              disabled={isSubmittingBug || bugReportStatus === 'success'}
-              className={`w-full py-3 text-white font-bold uppercase tracking-widest border-2 border-main shadow-[4px_4px_0_0_#111111] transition-all disabled:opacity-50 ${bugReportStatus === 'success' ? 'bg-green-600 hover:bg-green-600' : 'bg-[#C85A27] hover:bg-main active:shadow-none active:translate-x-[4px] active:translate-y-[4px]'}`}
-            >
-              {isSubmittingBug ? "Submitting..." : bugReportStatus === 'success' ? "Sent!" : "Submit Report"}
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

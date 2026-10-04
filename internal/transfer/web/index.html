@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#050505">
+    <title>Aero</title>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-base: #F4F1EA;
+            --grid-color: rgba(0, 0, 0, 0.05);
+            --primary: #C85A27;
+            --text-main: #111111;
+            --border-width: 2px;
+            --shadow-offset: 4px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: var(--bg-base);
+            /* Subtle Grid Background */
+            background-image: 
+                linear-gradient(var(--grid-color) 1px, transparent 1px),
+                linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
+            background-size: 20px 20px;
+            font-family: 'Space Mono', monospace;
+            color: var(--text-main);
+            position: relative;
+        }
+
+        .app {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            padding: 24px;
+            padding-top: calc(env(safe-area-inset-top, 24px) + 24px);
+            padding-bottom: env(safe-area-inset-bottom, 24px);
+        }
+
+        /* Brutalist Title Bar */
+        .title-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            background: #fff;
+            border: var(--border-width) solid var(--text-main);
+            box-shadow: var(--shadow-offset) var(--shadow-offset) 0 0 var(--text-main);
+            margin-bottom: 40px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: var(--primary);
+            border: var(--border-width) solid var(--text-main);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 18px;
+            color: #fff;
+            font-family: 'Anton', sans-serif;
+        }
+
+        .logo-text {
+            font-family: 'Anton', sans-serif;
+            font-size: 24px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .connection-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            background: #fff;
+            border: var(--border-width) solid var(--text-main);
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-main);
+            text-transform: uppercase;
+        }
+
+        .connection-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--primary);
+            border: 1px solid var(--text-main);
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 24px;
+        }
+
+        .main-title {
+            font-family: 'Anton', sans-serif;
+            font-size: 36px;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        /* Brutalist Button */
+        .action-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            width: 100%;
+            max-width: 300px;
+            padding: 16px 24px;
+            background: var(--primary);
+            border: var(--border-width) solid var(--text-main);
+            box-shadow: var(--shadow-offset) var(--shadow-offset) 0 0 var(--text-main);
+            color: #fff;
+            font-family: 'Space Mono', monospace;
+            font-size: 16px;
+            font-weight: 700;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+
+        .action-btn:active {
+            transform: translate(var(--shadow-offset), var(--shadow-offset));
+            box-shadow: 0 0 0 0 var(--text-main);
+        }
+
+        /* Panels */
+        .transfer-panel, .receive-panel {
+            width: 100%;
+            max-width: 320px;
+            padding: 20px;
+            background: #fff;
+            border: var(--border-width) solid var(--text-main);
+            box-shadow: var(--shadow-offset) var(--shadow-offset) 0 0 var(--text-main);
+            display: none;
+            flex-direction: column;
+        }
+
+        .transfer-panel.active, .receive-panel.active {
+            display: flex;
+        }
+
+        .transfer-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+            border-bottom: var(--border-width) solid var(--text-main);
+            padding-bottom: 12px;
+        }
+
+        .transfer-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .transfer-icon {
+            width: 36px;
+            height: 36px;
+            background: #fff;
+            border: var(--border-width) solid var(--text-main);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .transfer-name {
+            font-size: 14px;
+            font-weight: 700;
+            max-width: 140px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .transfer-status {
+            font-size: 12px;
+            font-weight: 400;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .preset-btn {
+            background: #fff; border: 2px solid #111; font-family: 'Space Mono'; font-size: 12px; font-weight: bold; padding: 4px 8px; cursor: pointer; transition: all 0.2s;
+        }
+        .preset-btn:active {
+            background: #111; color: #fff;
+        }
+
+        .live-badge {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        .live-badge::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: var(--primary);
+            border: 1px solid var(--text-main);
+            animation: pulse 1s infinite alternate;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            100% { opacity: 0.5; }
+        }
+
+        .progress-bar {
+            height: 12px;
+            background: #fff;
+            border: var(--border-width) solid var(--text-main);
+            margin-bottom: 16px;
+            position: relative;
+        }
+        .progress-fill {
+            height: 100%;
+            background: var(--primary);
+            width: 0%;
+            transition: width 0.3s;
+            border-right: var(--border-width) solid var(--text-main);
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+        .stat {
+            text-align: left;
+        }
+        .stat-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+        .stat-value {
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .cancel-btn {
+            width: 100%;
+            padding: 12px;
+            background: #fff;
+            border: var(--border-width) solid var(--text-main);
+            box-shadow: 2px 2px 0 0 var(--text-main);
+            font-family: 'Space Mono', monospace;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            cursor: pointer;
+        }
+        .cancel-btn:active {
+            transform: translate(2px, 2px);
+            box-shadow: 0 0 0 0 var(--text-main);
+        }
+
+        /* Receive Panel */
+        .receive-panel {
+            align-items: center;
+            text-align: center;
+        }
+        .receive-icon-wrapper {
+            width: 64px;
+            height: 64px;
+            background: #fff;
+            border: var(--border-width) solid var(--text-main);
+            box-shadow: 4px 4px 0 0 var(--text-main);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 24px;
+        }
+        .receive-icon-wrapper svg {
+            width: 32px;
+            height: 32px;
+            color: var(--text-main);
+        }
+        .receive-filename {
+            font-family: 'Anton', sans-serif;
+            font-size: 24px;
+            margin-bottom: 8px;
+            word-break: break-all;
+        }
+        .receive-message {
+            font-size: 12px;
+            margin-bottom: 24px;
+            border: var(--border-width) solid var(--text-main);
+            padding: 8px;
+            background: #fff;
+        }
+        .receive-btn {
+            width: 100%;
+            padding: 14px;
+            background: var(--primary);
+            color: #fff;
+            border: var(--border-width) solid var(--text-main);
+            box-shadow: var(--shadow-offset) var(--shadow-offset) 0 0 var(--text-main);
+            font-family: 'Space Mono', monospace;
+            font-weight: 700;
+            text-transform: uppercase;
+            text-decoration: none;
+            cursor: pointer;
+            margin-bottom: 12px;
+            display: inline-block;
+        }
+        .receive-btn:active {
+            transform: translate(var(--shadow-offset), var(--shadow-offset));
+            box-shadow: 0 0 0 0 var(--text-main);
+        }
+        .receive-done-btn {
+            background: #fff;
+            color: var(--text-main);
+        }
+
+        /* Recent Files */
+        .recents {
+            width: 100%;
+            max-width: 320px;
+        }
+        .recents-header {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+            border-bottom: var(--border-width) solid var(--text-main);
+            padding-bottom: 4px;
+        }
+        .recent-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: #fff;
+            border: var(--border-width) solid var(--text-main);
+            box-shadow: 2px 2px 0 0 var(--text-main);
+            margin-bottom: 12px;
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+        .recent-icon {
+            width: 32px;
+            height: 32px;
+            background: #fff;
+            border: var(--border-width) solid var(--text-main);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+        }
+        .recent-name {
+            flex: 1;
+            font-size: 12px;
+            font-weight: 700;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .recent-badge {
+            font-size: 10px;
+            padding: 2px 6px;
+            border: 1px solid var(--text-main);
+            background: var(--primary);
+            color: #fff;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        /* Stats Banner */
+        .stats-banner {
+            width: 100%;
+            max-width: 320px;
+            padding: 12px;
+            background: #fff;
+            border: var(--border-width) solid var(--text-main);
+            box-shadow: var(--shadow-offset) var(--shadow-offset) 0 0 var(--text-main);
+            margin-bottom: 20px;
+            display: none;
+        }
+        .stats-banner.show {
+            display: block;
+        }
+        .stats-banner-content {
+            font-size: 14px;
+            font-weight: 700;
+            text-align: center;
+            color: var(--primary);
+        }
+
+        /* Bottom Bar */
+        .bottom-bar {
+            text-align: center;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-top: auto;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app">
+        <!-- Title Bar -->
+        <div class="title-bar">
+            <div class="logo">
+                <div class="logo-icon">A</div>
+                <span class="logo-text">Aero</span>
+            </div>
+            <div style="display: flex; gap: 8px;">
+                <div class="connection-badge">
+                    <div class="connection-dot" id="connDot"></div>
+                    <span id="connText">Connecting…</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Stats Banner (permanent display) -->
+            <div class="stats-banner" id="statsBanner">
+                <div class="stats-banner-content" id="statsContent">--</div>
+            </div>
+
+            <h1 class="main-title" id="mainTitle">Send Files to PC</h1>
+
+            <!-- Action Button -->
+            <button class="action-btn" id="selectBtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="17 8 12 3 7 8" />
+                    <line x1="12" y1="3" x2="12" y2="15" />
+                </svg>
+                Select Files
+            </button>
+
+            <!-- Transfer Panel -->
+            <div class="transfer-panel" id="transferPanel">
+                <div class="transfer-header">
+                    <div class="transfer-info">
+                        <div class="transfer-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                <polyline points="17 8 12 3 7 8" />
+                                <line x1="12" y1="3" x2="12" y2="15" />
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="transfer-name" id="fileName">file.zip</div>
+                            <div class="transfer-status" id="transferStatus">Sending...</div>
+                        </div>
+                    </div>
+                    <div class="live-badge">Live</div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                </div>
+                <div class="stats-row">
+                    <div class="stat">
+                        <div class="stat-label">Speed</div>
+                        <div class="stat-value highlight" id="speedStat">0 MB/s</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Progress</div>
+                        <div class="stat-value" id="progressStat">0%</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">ETA</div>
+                        <div class="stat-value" id="etaStat">--</div>
+                    </div>
+                </div>
+                <button class="cancel-btn" id="cancelBtn">Tap to cancel</button>
+            </div>
+
+            <!-- Receive Panel -->
+            <div class="receive-panel" id="receivePanel">
+                <div class="receive-icon-wrapper">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                </div>
+                <div class="receive-filename" id="receiveFilename">file.zip</div>
+                <div class="receive-message">
+                    <strong>File received!</strong><br/>
+                    It has been saved to your downloads. If nothing appeared, tap Save again.
+                </div>
+                <a href="#" class="receive-btn" id="receiveBtn">Save Again</a>
+                <button class="receive-btn receive-done-btn" id="receiveDoneBtn">Done</button>
+            </div>
+
+            <!-- Recent Files -->
+            <div class="recents" id="recents"></div>
+            <!-- Bottom Stats (Recent Files zone) -->
+            <div class="bottom-bar">
+                <div id="recentFilesContainer" style="display: flex; flex-direction: column; gap: 8px;">
+                    <!-- Recent items will be inserted here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <input type="file" id="fileInput" multiple>
+
+    <script src="/cipher.js"></script>
+    <script src="/app.js"></script>
+</body>
+
+</html>

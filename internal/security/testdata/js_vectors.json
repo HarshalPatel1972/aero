@@ -1,0 +1,19 @@
+{
+  "key": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+  "token": {
+    "method": "PUT",
+    "path": "/api/upload/abc/0",
+    "value": "XLtfYDbIBNhKHAGKod3ZAm124mf-p7aCAB9J-vZ9TAz3EBooD-au1A"
+  },
+  "uploadInit": {
+    "plain": "{\"name\":\"photo.jpg\",\"size\":5,\"chunkSize\":65536}",
+    "box": "3c3963a109cd9b16591f55657485f0366012ccc55c144150feaebf1e0b187e9b7bb5062f6d9d4967b18d9e040984a053534daf55bd64fd33811c162d5140986e3d203e90b90065863e3d093330f03441593f6539a583c3"
+  },
+  "uploadChunk": {
+    "id": "abc",
+    "index": 3,
+    "total": 7,
+    "plain": "hello chunk",
+    "box": "852cb78857ac0c9fcf50f2aae4821b0bfbdcf0541544f07879855e3486dd3066228d57aa0474f2fde06c83064afcd64b39a34f"
+  }
+}

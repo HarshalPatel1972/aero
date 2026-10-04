@@ -33,7 +33,3 @@ export function StartServer(arg1) {
 export function StopServer() {
   return window['go']['main']['App']['StopServer']();
 }
-
-export function SubmitBugReport(arg1) {
-  return window['go']['main']['App']['SubmitBugReport'](arg1);
-}

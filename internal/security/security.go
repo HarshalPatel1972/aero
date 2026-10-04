@@ -1,155 +1,182 @@
 // MIT License
-//
 // Copyright (c) 2026 Project AERO Contributors
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in all
-// copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-// SOFTWARE.
 
-// Package security provides cryptographic primitives for the AERO E2EE protocol.
-// Implements the "Optical-Key" Protocol using AES-256-CTR for streaming encryption.
+// Package security implements Aero's session cryptography.
+//
+// Protocol (v1)
+//
+// The desktop app generates a random 32-byte session key K each time the
+// server starts. K reaches the phone only optically, inside the QR code's URL
+// fragment (http://ip:port/#k=<base64url K>). Browsers never send the fragment
+// over the network, so K never crosses the LAN.
+//
+// Every payload is sealed with XChaCha20-Poly1305 under K, using a fresh random
+// 24-byte nonce:
+//
+//	box = nonce(24) || ciphertext || tag(16)
+//
+// Each kind of message uses its own associated data (AAD), which binds a box to
+// its purpose, transfer ID and chunk index. A box cannot be replayed into a
+// different slot, and any tampering makes decryption fail.
+//
+// Requests that carry no sealed body (WebSocket connect, downloads, cancel)
+// carry an auth token instead: a box with an empty plaintext whose AAD is the
+// request method and path. The server rejects tokens it has already seen, so a
+// captured token cannot be replayed.
+//
+// The phone uses @noble/ciphers (audited, MIT) for the same construction,
+// because the browser's WebCrypto API is unavailable on plain-HTTP LAN pages.
 package security
 
 import (
-	"crypto/aes"
-	"crypto/cipher"
 	"crypto/rand"
 	"encoding/base64"
+	"errors"
 	"fmt"
-	"io"
+	"strings"
+	"sync"
+
+	"golang.org/x/crypto/chacha20poly1305"
 )
 
-// KeySize defines the AES-256 key size in bytes.
-// 32 bytes = 256 bits for AES-256.
-const KeySize = 32
+// KeySize is the session key length in bytes.
+const KeySize = chacha20poly1305.KeySize
 
-// IVSize defines the initialization vector size for AES-CTR.
-// 16 bytes = 128 bits (AES block size).
-const IVSize = 16
+// Overhead is the number of bytes a sealed box adds to its plaintext.
+const Overhead = chacha20poly1305.NonceSizeX + chacha20poly1305.Overhead
 
-// GenerateSessionKey creates a cryptographically secure 32-byte session key.
-// Returns URL-safe base64 encoding (no padding) suitable for URL hash fragments.
-//
-// Security: Uses crypto/rand which reads from the OS CSPRNG
-// (CryptGenRandom on Windows, /dev/urandom on Unix).
+// maxSeenTokens bounds the replay cache. At 4 MiB per chunk this allows
+// roughly 2 TB of transfers before the phone must rescan the QR code.
+const maxSeenTokens = 500_000
+
+var (
+	// ErrAuth means a box or token failed authentication.
+	ErrAuth = errors.New("authentication failed")
+	// ErrReplay means a token was presented twice.
+	ErrReplay = errors.New("token already used")
+	// ErrSessionExhausted means the replay cache is full and the session must be restarted.
+	ErrSessionExhausted = errors.New("session exhausted; restart the server and rescan")
+)
+
+// AAD domain-separation labels. They must match the phone client exactly.
+const (
+	aadAuth          = "aero/v1/auth"
+	aadWSServer      = "aero/v1/ws/s2c"
+	aadUploadInit    = "aero/v1/upload-init"
+	aadUploadChunk   = "aero/v1/upload-chunk"
+	aadDownloadChunk = "aero/v1/download-chunk"
+)
+
+func joinAAD(parts ...string) []byte {
+	return []byte(strings.Join(parts, "\x00"))
+}
+
+// AuthAAD is the associated data for a request auth token.
+func AuthAAD(method, path string) []byte { return joinAAD(aadAuth, method, path) }
+
+// WSServerAAD is the associated data for server-to-phone WebSocket messages.
+func WSServerAAD() []byte { return joinAAD(aadWSServer) }
+
+// UploadInitAAD is the associated data for an upload's metadata.
+func UploadInitAAD() []byte { return joinAAD(aadUploadInit) }
+
+// UploadChunkAAD is the associated data for one uploaded chunk.
+func UploadChunkAAD(id string, index, total int) []byte {
+	return joinAAD(aadUploadChunk, id, fmt.Sprint(index), fmt.Sprint(total))
+}
+
+// DownloadChunkAAD is the associated data for one downloaded chunk.
+func DownloadChunkAAD(id string, index, total int) []byte {
+	return joinAAD(aadDownloadChunk, id, fmt.Sprint(index), fmt.Sprint(total))
+}
+
+// GenerateSessionKey returns a fresh random key and its URL-safe encoding.
 func GenerateSessionKey() (string, []byte, error) {
 	key := make([]byte, KeySize)
 	if _, err := rand.Read(key); err != nil {
 		return "", nil, fmt.Errorf("failed to generate random key: %w", err)
 	}
-
-	// URL-safe base64, no padding - safe for hash fragments
-	encoded := base64.RawURLEncoding.EncodeToString(key)
-	return encoded, key, nil
+	return base64.RawURLEncoding.EncodeToString(key), key, nil
 }
 
-// DecodeSessionKey decodes a URL-safe base64 session key back to bytes.
-func DecodeSessionKey(encoded string) ([]byte, error) {
-	key, err := base64.RawURLEncoding.DecodeString(encoded)
-	if err != nil {
-		return nil, fmt.Errorf("failed to decode session key: %w", err)
-	}
+// Session holds the key for one server run and the replay cache for auth tokens.
+type Session struct {
+	key []byte
+
+	mu   sync.Mutex
+	seen map[[chacha20poly1305.NonceSizeX]byte]struct{}
+}
+
+// NewSession creates a Session for key, which must be KeySize bytes.
+func NewSession(key []byte) (*Session, error) {
 	if len(key) != KeySize {
 		return nil, fmt.Errorf("invalid key size: got %d, expected %d", len(key), KeySize)
 	}
-	return key, nil
+	k := make([]byte, KeySize)
+	copy(k, key)
+	return &Session{key: k, seen: make(map[[chacha20poly1305.NonceSizeX]byte]struct{})}, nil
 }
 
-// DecryptReader wraps an io.Reader to provide streaming AES-256-CTR decryption.
-// The encrypted stream must have the IV prepended as the first 16 bytes.
-//
-// Architecture:
-//   - First Read() call extracts the 16-byte IV from the stream
-//   - Subsequent reads decrypt data in a streaming fashion
-//   - No buffering of ciphertext - true stream cipher behavior
-//
-// Why AES-CTR over AES-GCM:
-//
-//	GCM provides authentication but requires the auth tag at stream end,
-//	forcing full buffering for verification. CTR mode provides true
-//	stream-cipher behavior with zero buffering - essential for 10GB+ files
-//	on memory-constrained mobile devices.
-//
-// Threat Model Note:
-//
-//	CTR does not provide integrity/authentication. An attacker could flip
-//	bits in transit. For LAN transfers with visual confirmation (QR scan),
-//	this is acceptable. Phase 3 could add HMAC-based integrity if required.
-type DecryptReader struct {
-	source      io.Reader
-	stream      cipher.Stream
-	key         []byte
-	initialized bool
-}
-
-// NewDecryptReader creates a new streaming decryptor.
-// The key must be exactly 32 bytes (AES-256).
-// The source reader must contain: [16-byte IV][encrypted data...]
-func NewDecryptReader(key []byte, source io.Reader) (*DecryptReader, error) {
-	if len(key) != KeySize {
-		return nil, fmt.Errorf("invalid key size: got %d, expected %d", len(key), KeySize)
-	}
-	return &DecryptReader{
-		source: source,
-		key:    key,
-	}, nil
-}
-
-// Read implements io.Reader with streaming decryption.
-// First call reads the IV from the stream and initializes the cipher.
-// Subsequent calls decrypt data directly into the provided buffer.
-func (dr *DecryptReader) Read(p []byte) (int, error) {
-	// Lazy initialization: read IV on first Read() call
-	if !dr.initialized {
-		if err := dr.initialize(); err != nil {
-			return 0, err
-		}
-	}
-
-	// Read ciphertext and decrypt in-place
-	n, err := dr.source.Read(p)
-	if n > 0 {
-		// XORKeyStream decrypts in-place - no additional allocation
-		dr.stream.XORKeyStream(p[:n], p[:n])
-	}
-	return n, err
-}
-
-// initialize reads the IV from the stream and sets up the AES-CTR cipher.
-func (dr *DecryptReader) initialize() error {
-	// Read exactly IVSize bytes for the initialization vector
-	iv := make([]byte, IVSize)
-	if _, err := io.ReadFull(dr.source, iv); err != nil {
-		if err == io.EOF {
-			return fmt.Errorf("stream too short: missing IV")
-		}
-		return fmt.Errorf("failed to read IV: %w", err)
-	}
-
-	// Create AES cipher block
-	block, err := aes.NewCipher(dr.key)
+// Seal encrypts plaintext and returns nonce||ciphertext||tag.
+func (s *Session) Seal(plaintext, aad []byte) ([]byte, error) {
+	aead, err := chacha20poly1305.NewX(s.key)
 	if err != nil {
-		return fmt.Errorf("failed to create AES cipher: %w", err)
+		return nil, err
+	}
+	out := make([]byte, chacha20poly1305.NonceSizeX, chacha20poly1305.NonceSizeX+len(plaintext)+aead.Overhead())
+	if _, err := rand.Read(out); err != nil {
+		return nil, err
+	}
+	return aead.Seal(out, out, plaintext, aad), nil
+}
+
+// Open authenticates and decrypts a box produced by Seal (or the phone client).
+// The plaintext is decrypted in place and aliases box.
+func (s *Session) Open(box, aad []byte) ([]byte, error) {
+	if len(box) < Overhead {
+		return nil, ErrAuth
+	}
+	aead, err := chacha20poly1305.NewX(s.key)
+	if err != nil {
+		return nil, err
+	}
+	nonce, ct := box[:chacha20poly1305.NonceSizeX], box[chacha20poly1305.NonceSizeX:]
+	pt, err := aead.Open(ct[:0], nonce, ct, aad)
+	if err != nil {
+		return nil, ErrAuth
+	}
+	return pt, nil
+}
+
+// VerifyToken checks a base64url auth token for the given method and path,
+// rejecting any token that has been used before.
+func (s *Session) VerifyToken(token, method, path string) error {
+	raw, err := base64.RawURLEncoding.DecodeString(token)
+	if err != nil || len(raw) != Overhead {
+		return ErrAuth
+	}
+	var nonce [chacha20poly1305.NonceSizeX]byte
+	copy(nonce[:], raw)
+
+	if _, err := s.Open(raw, AuthAAD(method, path)); err != nil {
+		return err
 	}
 
-	// Create CTR stream cipher
-	// CTR mode turns a block cipher into a stream cipher
-	dr.stream = cipher.NewCTR(block, iv)
-	dr.initialized = true
-
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if _, dup := s.seen[nonce]; dup {
+		return ErrReplay
+	}
+	if len(s.seen) >= maxSeenTokens {
+		return ErrSessionExhausted
+	}
+	s.seen[nonce] = struct{}{}
 	return nil
+}
+
+// Destroy zeroes the key. The Session must not be used afterwards.
+func (s *Session) Destroy() {
+	for i := range s.key {
+		s.key[i] = 0
+	}
 }

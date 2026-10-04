@@ -45,7 +45,6 @@ declare global {
           OpenDownloadsFolder: () => Promise<void>;
           SendFileToPhone: () => Promise<void>;
           IsPhoneConnected: () => Promise<boolean>;
-          SubmitBugReport: (message: string) => Promise<void>;
         };
       };
     };
