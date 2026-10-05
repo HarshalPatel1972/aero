@@ -150,7 +150,8 @@ foreach ($f in @($EXE_PATH, $INSTALLER_PATH)) {
         $lines += "$((Get-FileHash -Path $f -Algorithm SHA256).Hash.ToLower())  $(Split-Path -Leaf $f)"
     }
 }
-Set-Content -Path $CHECKSUM_FILE -Value ($lines -join "`r`n") -NoNewline
+# LF line endings so `sha256sum -c checksum.sha256` works on every platform.
+[System.IO.File]::WriteAllText($CHECKSUM_FILE, ($lines -join "`n") + "`n")
 Write-Ok "Saved $CHECKSUM_FILE"
 
 Write-Host "`n  BUILD SUCCESSFUL - Aero v$Version" -ForegroundColor Green
