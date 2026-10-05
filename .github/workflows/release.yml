@@ -1,0 +1,80 @@
+# Builds Aero from source on GitHub's Windows runners and publishes a
+# GitHub release. Every published binary comes from this workflow, never
+# from a developer machine, so anyone can trace it back to the tagged source.
+#
+# To release: bump info.productVersion in wails.json, merge to main, then
+#   git tag -a v2.1.0 -m "release notes…" && git push origin v2.1.0
+# The annotated tag's message becomes the release notes.
+
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check tag matches wails.json version
+        shell: pwsh
+        run: |
+          $version = (Get-Content wails.json -Raw | ConvertFrom-Json).info.productVersion
+          if ("v$version" -ne "${{ github.ref_name }}") {
+            Write-Error "Tag ${{ github.ref_name }} does not match wails.json version v$version"
+            exit 1
+          }
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Wails CLI (same version as go.mod)
+        shell: pwsh
+        run: |
+          $wails = (go list -m -f '{{.Version}}' github.com/wailsapp/wails/v2)
+          go install "github.com/wailsapp/wails/v2/cmd/wails@$wails"
+
+      - name: Install NSIS (if the runner image lacks it)
+        shell: pwsh
+        run: |
+          if (-not (Get-Command makensis -ErrorAction SilentlyContinue) -and -not (Test-Path 'C:\Program Files (x86)\NSIS\makensis.exe')) {
+            choco install nsis -y --no-progress
+          }
+
+      - name: Build (tests, frontend, app, installer, checksums)
+        shell: pwsh
+        run: ./scripts/build_release.ps1
+
+      - name: Keep build outputs as a workflow artifact
+        id: upload-unsigned
+        uses: actions/upload-artifact@v4
+        with:
+          name: aero-${{ github.ref_name }}-windows
+          path: |
+            build/bin/Aero.exe
+            build/bin/Aero_Setup.exe
+            build/bin/checksum.sha256
+          if-no-files-found: error
+
+      - name: Publish GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" `
+            build/bin/Aero_Setup.exe build/bin/Aero.exe build/bin/checksum.sha256 `
+            --title "Aero ${{ github.ref_name }}" `
+            --notes-from-tag `
+            --verify-tag
