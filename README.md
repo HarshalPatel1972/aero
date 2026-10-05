@@ -84,6 +84,16 @@ wails dev
 
 The version number lives in one place: `info.productVersion` in `wails.json`.
 
+### Releasing
+Official releases are built by GitHub Actions, not locally. Bump `info.productVersion` in `wails.json`, merge to `main`, then push an annotated tag whose message is the release notes:
+
+```sh
+git tag -a v2.1.0 -m "What changed…"
+git push origin v2.1.0
+```
+
+The [Release workflow](.github/workflows/release.yml) runs the tests, builds `Aero.exe` and `Aero_Setup.exe` on a clean Windows runner and publishes the GitHub release.
+
 ### Code Signing
 Unsigned apps trigger Windows SmartScreen warnings. Buy a code-signing certificate, then set either `AERO_SIGN_PFX` + `AERO_SIGN_PASSWORD` or `AERO_SIGN_THUMBPRINT` before running the build script. See the header of `scripts/build_release.ps1`.
 
@@ -104,6 +114,25 @@ Unsigned apps trigger Windows SmartScreen warnings. Buy a code-signing certifica
 | **Styling** | TailwindCSS + Framer Motion |
 | **Crypto** | XChaCha20-Poly1305: `@noble/ciphers` (phone) + `golang.org/x/crypto` (PC) |
 | **Protocol** | Encrypted, authenticated chunked HTTP + WebSocket (see `internal/security/security.go`) |
+
+---
+
+## ✍️ Code Signing Policy
+
+Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org).
+
+Every release binary is built from this repository's source by the public [Release workflow](.github/workflows/release.yml) on GitHub Actions, never on a personal machine. Signing requests are created by that workflow and must be manually approved before anything is signed.
+
+**Team roles**
+
+| Role | Member |
+|------|--------|
+| Committers and reviewers | [@HarshalPatel1972](https://github.com/HarshalPatel1972) (repository owner) |
+| Approvers | [@HarshalPatel1972](https://github.com/HarshalPatel1972) |
+
+All team members use multi-factor authentication for GitHub and SignPath.
+
+**Privacy policy:** This program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it. Aero only exchanges data with the phone you link by scanning its QR code, directly over your local network. It has no telemetry, analytics, accounts or cloud servers, and it does not check for updates in the background.
 
 ---
 
