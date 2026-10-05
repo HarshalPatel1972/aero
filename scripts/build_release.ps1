@@ -1,324 +1,157 @@
 # ============================================================================
 # AERO Production Release Build Script
-# scripts/build_release.ps1
-#
-# Term-Phase 11: "Portable Perfection"
-# One-click fabrication of the final distributable asset.
 #
 # Usage:
 #   .\scripts\build_release.ps1
-#   .\scripts\build_release.ps1 -SkipUPX    # Skip UPX compression
-#   .\scripts\build_release.ps1 -Version "1.1.0"
+#   .\scripts\build_release.ps1 -UseUPX     # opt-in UPX compression (see note below)
 #
-# Requirements:
-#   - Go 1.21+
-#   - Wails CLI v2.x
-#   - Node.js 18+
-#   - (Optional) UPX for binary compression
+# Code signing (strongly recommended for public releases - unsigned apps trigger
+# Windows SmartScreen warnings). Provide a code-signing certificate either as a
+# PFX file or by thumbprint from the Windows certificate store:
+#   $env:AERO_SIGN_PFX = "C:\certs\aero.pfx"; $env:AERO_SIGN_PASSWORD = "..."
+#   or
+#   $env:AERO_SIGN_THUMBPRINT = "ABCDEF..."
+# signtool.exe comes with the Windows SDK.
+#
+# The version comes from wails.json (info.productVersion) - the single source
+# of truth. Bump it there before releasing.
+#
+# Requirements: Go, Node.js, Wails CLI v2, NSIS (for the installer)
 # ============================================================================
 
 param(
-    [string]$Version = "1.0.0",
-    [switch]$SkipUPX = $false,
-    [switch]$SkipClean = $false
+    [switch]$UseUPX = $false
 )
 
 $ErrorActionPreference = "Stop"
 
-# ============================================================================
-# CONFIGURATION
-# ============================================================================
-
-$PROJECT_ROOT = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
-if (-not $PROJECT_ROOT) { $PROJECT_ROOT = Get-Location }
-
+$PROJECT_ROOT = Split-Path -Parent $PSScriptRoot
 $BUILD_DIR = Join-Path $PROJECT_ROOT "build\bin"
-$OUTPUT_NAME = "Aero.exe"
-$OUTPUT_PATH = Join-Path $BUILD_DIR $OUTPUT_NAME
-$OUTPUT_NAME = "Aero.exe"
-$OUTPUT_PATH = Join-Path $BUILD_DIR $OUTPUT_NAME
-$INSTALLER_NAME = "Aero_Setup.exe"
-$INSTALLER_PATH = Join-Path $BUILD_DIR $INSTALLER_NAME
+$EXE_PATH = Join-Path $BUILD_DIR "Aero.exe"
+$WAILS_INSTALLER = Join-Path $BUILD_DIR "Aero-amd64-installer.exe"
+$INSTALLER_PATH = Join-Path $BUILD_DIR "Aero_Setup.exe"
 $CHECKSUM_FILE = Join-Path $BUILD_DIR "checksum.sha256"
+$NSIS_SCRIPT = Join-Path $PROJECT_ROOT "build\windows\installer\project.nsi"
 
-# Colors for output
-$COLOR_INFO = "Cyan"
-$COLOR_SUCCESS = "Green"
-$COLOR_WARN = "Yellow"
-$COLOR_ERROR = "Red"
+function Write-Step { param([string]$m) Write-Host "`n[->] $m" -ForegroundColor Cyan }
+function Write-Ok   { param([string]$m) Write-Host "    OK  $m" -ForegroundColor Green }
+function Write-Warn { param([string]$m) Write-Host "    !!  $m" -ForegroundColor Yellow }
+function Fail       { param([string]$m) Write-Host "    XX  $m" -ForegroundColor Red; exit 1 }
 
-# ============================================================================
-# FUNCTIONS
-# ============================================================================
-
-function Write-Step {
-    param([string]$Message)
-    Write-Host "`n[$([char]0x2192)] $Message" -ForegroundColor $COLOR_INFO
+function Find-Tool {
+    param([string]$Name, [string[]]$Fallbacks = @())
+    $cmd = Get-Command $Name -ErrorAction SilentlyContinue
+    if ($cmd) { return $cmd.Source }
+    foreach ($p in $Fallbacks) {
+        $hit = Get-ChildItem -Path $p -ErrorAction SilentlyContinue | Sort-Object FullName -Descending | Select-Object -First 1
+        if ($hit) { return $hit.FullName }
+    }
+    return $null
 }
 
-function Write-Success {
-    param([string]$Message)
-    Write-Host "    $([char]0x2713) $Message" -ForegroundColor $COLOR_SUCCESS
-}
+Set-Location $PROJECT_ROOT
+$Version = (Get-Content (Join-Path $PROJECT_ROOT "wails.json") -Raw | ConvertFrom-Json).info.productVersion
 
-function Write-Warn {
-    param([string]$Message)
-    Write-Host "    $([char]0x26A0) $Message" -ForegroundColor $COLOR_WARN
-}
+Write-Host "`n============================================" -ForegroundColor Cyan
+Write-Host "  AERO Production Build v$Version" -ForegroundColor Cyan
+Write-Host "============================================" -ForegroundColor Cyan
 
-function Write-Fail {
-    param([string]$Message)
-    Write-Host "    $([char]0x2717) $Message" -ForegroundColor $COLOR_ERROR
+# ---------------------------------------------------------------------------
+Write-Step "Pre-flight checks"
+foreach ($tool in @("go", "node", "npm", "wails")) {
+    if (-not (Get-Command $tool -ErrorAction SilentlyContinue)) { Fail "$tool not found on PATH" }
 }
+Write-Ok "Go, Node.js and Wails found"
 
-function Get-FileSize {
+$makensis = Find-Tool "makensis" @("C:\Program Files (x86)\NSIS\makensis.exe", "C:\Program Files\NSIS\makensis.exe")
+if ($makensis) { Write-Ok "NSIS: $makensis" } else { Write-Warn "NSIS not found - the installer will be skipped (https://nsis.sourceforge.io)" }
+
+$signtool = Find-Tool "signtool" @("C:\Program Files (x86)\Windows Kits\10\bin\*\x64\signtool.exe")
+$signArgs = $null
+if ($env:AERO_SIGN_PFX) {
+    $signArgs = @("/f", $env:AERO_SIGN_PFX, "/p", $env:AERO_SIGN_PASSWORD)
+} elseif ($env:AERO_SIGN_THUMBPRINT) {
+    $signArgs = @("/sha1", $env:AERO_SIGN_THUMBPRINT)
+}
+if ($signArgs -and -not $signtool) { Fail "Signing requested but signtool.exe was not found (install the Windows SDK)" }
+if ($signArgs) { Write-Ok "Code signing enabled" } else { Write-Warn "Code signing NOT configured - users will see SmartScreen warnings" }
+
+function Sign-File {
     param([string]$Path)
-    $size = (Get-Item $Path).Length
-    if ($size -gt 1MB) {
-        return "{0:N2} MB" -f ($size / 1MB)
-    } elseif ($size -gt 1KB) {
-        return "{0:N2} KB" -f ($size / 1KB)
-    }
-    return "$size B"
+    if (-not $signArgs) { return }
+    & $signtool sign @signArgs /fd SHA256 /tr "http://timestamp.digicert.com" /td SHA256 /d "Aero" $Path
+    if ($LASTEXITCODE -ne 0) { Fail "Signing failed for $Path" }
+    Write-Ok "Signed $(Split-Path -Leaf $Path)"
 }
 
-# ============================================================================
-# PRE-FLIGHT CHECKS
-# ============================================================================
+# ---------------------------------------------------------------------------
+Write-Step "Running tests"
+go test ./internal/security/ ./internal/transfer/
+if ($LASTEXITCODE -ne 0) { Fail "Tests failed" }
+Write-Ok "Tests passed"
 
-Write-Host ""
-Write-Host "============================================" -ForegroundColor $COLOR_INFO
-Write-Host "  AERO Production Build v$Version" -ForegroundColor $COLOR_INFO
-Write-Host "  $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor DarkGray
-Write-Host "============================================" -ForegroundColor $COLOR_INFO
+# ---------------------------------------------------------------------------
+Write-Step "Building frontend"
+# The Go binary embeds frontend/dist, which does not exist in a fresh clone.
+Push-Location (Join-Path $PROJECT_ROOT "frontend")
+npm ci
+if ($LASTEXITCODE -ne 0) { Pop-Location; Fail "npm ci failed" }
+npm run build
+if ($LASTEXITCODE -ne 0) { Pop-Location; Fail "Frontend build failed" }
+Pop-Location
+Write-Ok "Frontend built"
 
-Write-Step "Pre-flight checks..."
+# ---------------------------------------------------------------------------
+Write-Step "Applying app icon"
+# build/ is generated and not committed; without this Wails falls back to its
+# default icon. The committed source of truth is assets/.
+New-Item -ItemType Directory -Force (Join-Path $PROJECT_ROOT "build\windows") | Out-Null
+Copy-Item -Force (Join-Path $PROJECT_ROOT "assets\appicon.png") (Join-Path $PROJECT_ROOT "build\appicon.png")
+Copy-Item -Force (Join-Path $PROJECT_ROOT "assets\icon.ico") (Join-Path $PROJECT_ROOT "build\windows\icon.ico")
+Write-Ok "Icon copied from assets/"
 
-# Check Go
-try {
-    $goVersion = go version 2>&1
-    Write-Success "Go: $goVersion"
-} catch {
-    Write-Fail "Go not found. Install from https://go.dev"
-    exit 1
-}
 
-# Check Wails
-try {
-    $wailsVersion = wails version 2>&1 | Select-Object -First 1
-    Write-Success "Wails: $wailsVersion"
-} catch {
-    Write-Fail "Wails CLI not found. Run: go install github.com/wailsapp/wails/v2/cmd/wails@latest"
-    exit 1
-}
-
-# Check Node
-try {
-    $nodeVersion = node --version 2>&1
-    Write-Success "Node.js: $nodeVersion"
-} catch {
-    Write-Fail "Node.js not found. Install from https://nodejs.org"
-    exit 1
-}
-
-# Check UPX (optional)
-$hasUPX = $false
-if (-not $SkipUPX) {
-    try {
-        $upxVersion = upx --version 2>&1 | Select-Object -First 1
-        Write-Success "UPX: $upxVersion"
-        $hasUPX = $true
-    } catch {
-        Write-Warn "UPX not found. Binary compression will be skipped."
-        Write-Warn "Install from: https://upx.github.io/"
-    }
-}
-
-# Check NSIS (makensis)
-$hasNSIS = $false
-$makensisPath = "makensis"
-
-try {
-    $nsisVersion = & $makensisPath /VERSION 2>&1 | Select-Object -First 1
-    if ($nsisVersion) {
-        Write-Success "NSIS (PATH): $nsisVersion"
-        $hasNSIS = $true
-    }
-} catch {
-    # Try user-provided path
-    $fallbackPath = "C:\Program Files (x86)\NSIS\makensis.exe"
-    if (Test-Path $fallbackPath) {
-        $makensisPath = $fallbackPath
-        # Verify it works
-        try {
-            $nsisVersion = & $makensisPath /VERSION 2>&1 | Select-Object -First 1
-            if ($nsisVersion) {
-                Write-Success "NSIS (Local): $nsisVersion"
-                $hasNSIS = $true
-            }
-        } catch {
-             Write-Warn "Found NSIS at default path but execution failed."
-        }
-    } else {
-        Write-Warn "NSIS (makensis) not found. Installer generation will be skipped."
-    }
-}
-
-# ============================================================================
-# STEP 1: CLEAN
-# ============================================================================
-
-if (-not $SkipClean) {
-    Write-Step "Cleaning previous builds..."
-    
-    if (Test-Path $BUILD_DIR) {
-        Remove-Item -Path $BUILD_DIR -Recurse -Force
-        Write-Success "Removed: $BUILD_DIR"
-    }
-    
-    # Clean Go cache for fresh build
-    go clean -cache 2>&1 | Out-Null
-    Write-Success "Go cache cleared"
-}
-
-# ============================================================================
-# STEP 2: BUILD
-# ============================================================================
-
-Write-Step "Building production binary..."
-
-Set-Location $PROJECT_ROOT
-
-$buildArgs = @(
-    "build",
-    "-platform", "windows/amd64",
-    "-clean"
-)
-
-# Add ldflags for version injection (simplified to avoid shell quoting issues)
-$ldflags = "-s -w" 
-$buildArgs += "-ldflags"
-$buildArgs += $ldflags
-
-Write-Host "    Command: wails $($buildArgs -join ' ')" -ForegroundColor DarkGray
-
-# Run directly to stream output
+# ---------------------------------------------------------------------------
+Write-Step "Building application"
+$buildArgs = @("build", "-clean", "-platform", "windows/amd64", "-ldflags", "-s -w", "-trimpath")
+if ($makensis) { $buildArgs += "-nsis" }
 & wails @buildArgs
+if ($LASTEXITCODE -ne 0) { Fail "Wails build failed" }
+if (-not (Test-Path $EXE_PATH)) { Fail "Output binary not found: $EXE_PATH" }
+Write-Ok "Built $EXE_PATH"
 
-if ($LASTEXITCODE -ne 0) {
-    Write-Fail "Build failed!"
-    exit 1
+# UPX-packed executables are frequently flagged by antivirus software, which
+# is a real problem for a public release. Only use it if you have tested that.
+if ($UseUPX) {
+    if (-not (Get-Command upx -ErrorAction SilentlyContinue)) { Fail "-UseUPX given but upx not found" }
+    upx --best --lzma -q $EXE_PATH
+    if ($LASTEXITCODE -ne 0) { Fail "UPX failed" }
+    Write-Ok "Compressed with UPX"
 }
 
-Write-Success "Build completed"
+Sign-File $EXE_PATH
 
-# Verify output exists
-if (-not (Test-Path $OUTPUT_PATH)) {
-    Write-Fail "Output binary not found: $OUTPUT_PATH"
-    exit 1
+# ---------------------------------------------------------------------------
+if ($makensis) {
+    Write-Step "Packaging installer"
+    # Repackage so the installer contains the final (compressed/signed) exe.
+    & $makensis "-DARG_WAILS_AMD64_BINARY=$EXE_PATH" $NSIS_SCRIPT
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path $WAILS_INSTALLER)) { Fail "Installer packaging failed" }
+    Move-Item -Force $WAILS_INSTALLER $INSTALLER_PATH
+    Sign-File $INSTALLER_PATH
+    Write-Ok "Installer: $INSTALLER_PATH"
 }
 
-$originalSize = Get-FileSize $OUTPUT_PATH
-Write-Success "Binary size: $originalSize"
-
-# ============================================================================
-# STEP 3: COMPRESS (UPX)
-# ============================================================================
-
-if ($hasUPX -and -not $SkipUPX) {
-    Write-Step "Compressing binary with UPX..."
-    
-    # NOTE: UPX is generally safe with Wails binaries, but test thoroughly
-    # If issues occur, use --skip-upx flag
-    
-    $upxArgs = @(
-        "--best",
-        "--lzma",
-        "-q",
-        $OUTPUT_PATH
-    )
-    
-    $upxResult = & upx @upxArgs 2>&1
-    
-    if ($LASTEXITCODE -eq 0) {
-        $compressedSize = Get-FileSize $OUTPUT_PATH
-        Write-Success "Compressed: $originalSize -> $compressedSize"
-    } else {
-        Write-Warn "UPX compression failed (binary still usable)"
-        Write-Host $upxResult -ForegroundColor Yellow
+# ---------------------------------------------------------------------------
+Write-Step "Generating SHA256 checksums"
+$lines = @()
+foreach ($f in @($EXE_PATH, $INSTALLER_PATH)) {
+    if (Test-Path $f) {
+        $lines += "$((Get-FileHash -Path $f -Algorithm SHA256).Hash.ToLower())  $(Split-Path -Leaf $f)"
     }
-} else {
-    Write-Warn "Skipping UPX compression"
 }
+Set-Content -Path $CHECKSUM_FILE -Value ($lines -join "`r`n") -NoNewline
+Write-Ok "Saved $CHECKSUM_FILE"
 
-# ============================================================================
-# STEP 4: GENERATE INSTALLER (NSIS)
-# ============================================================================
-
-if ($hasNSIS) {
-    Write-Step "Generating NSIS Installer..."
-    
-    $nsisScript = Join-Path $PROJECT_ROOT "build\windows\installer.nsi"
-    if (-not (Test-Path $nsisScript)) {
-        Write-Warn "NSIS script not found at: $nsisScript"
-    } else {
-        # Run makensis
-        # /V2 = Verbosity level 2 (errors/warnings)
-        $nsisArgs = @("/V2", $nsisScript)
-        
-        Write-Host "    Command: & `"$makensisPath`" $nsisScript" -ForegroundColor DarkGray
-        $nsisResult = & $makensisPath @nsisArgs 2>&1
-        
-        if ($LASTEXITCODE -eq 0 -and (Test-Path $INSTALLER_PATH)) {
-            $installerSize = Get-FileSize $INSTALLER_PATH
-            Write-Success "Installer created: $INSTALLER_NAME ($installerSize)"
-        } else {
-            Write-Warn "Installer generation failed"
-            Write-Host $nsisResult -ForegroundColor Yellow
-        }
-    }
-} else {
-    Write-Warn "Skipping Installer generation (NSIS missing)"
-}
-
-# ============================================================================
-# STEP 5: GENERATE CHECKSUM
-# ============================================================================
-
-Write-Step "Generating SHA256 checksum..."
-
-$hash = Get-FileHash -Path $OUTPUT_PATH -Algorithm SHA256
-$hashString = $hash.Hash.ToLower()
-$checksumContent = "$hashString  $OUTPUT_NAME"
-
-if (Test-Path $INSTALLER_PATH) {
-    $instHash = Get-FileHash -Path $INSTALLER_PATH -Algorithm SHA256
-    $instHashString = $instHash.Hash.ToLower()
-    $checksumContent += "`r`n$instHashString  $INSTALLER_NAME"
-}
-
-Set-Content -Path $CHECKSUM_FILE -Value $checksumContent -NoNewline
-Write-Success "Checksum: $hashString"
-Write-Success "Saved to: $CHECKSUM_FILE"
-
-# ============================================================================
-# SUMMARY
-# ============================================================================
-
-Write-Host ""
-Write-Host "============================================" -ForegroundColor $COLOR_SUCCESS
-Write-Host "  BUILD SUCCESSFUL!" -ForegroundColor $COLOR_SUCCESS
-Write-Host "============================================" -ForegroundColor $COLOR_SUCCESS
-Write-Host ""
-Write-Host "  Output:   $OUTPUT_PATH" -ForegroundColor White
-Write-Host "  Size:     $(Get-FileSize $OUTPUT_PATH)" -ForegroundColor White
-Write-Host "  Version:  $Version" -ForegroundColor White
-Write-Host "  Checksum: $hashString" -ForegroundColor DarkGray
-Write-Host "  Installer: $INSTALLER_PATH" -ForegroundColor White
-Write-Host "  Size:      $(if (Test-Path $INSTALLER_PATH) { Get-FileSize $INSTALLER_PATH } else { "N/A" })" -ForegroundColor White
-Write-Host ""
-Write-Host "  Ready for distribution!" -ForegroundColor $COLOR_SUCCESS
-Write-Host ""
-
-# Return to original directory
-Set-Location $PROJECT_ROOT
+Write-Host "`n  BUILD SUCCESSFUL - Aero v$Version" -ForegroundColor Green
+Write-Host "  $BUILD_DIR`n"

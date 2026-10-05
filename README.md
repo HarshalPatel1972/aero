@@ -17,23 +17,24 @@ Phone ↔ PC • Encrypted • Blazing Fast
 
 ## 🚀 Features
 
-*   **⚡ Blazing Fast**: 40-100+ MB/s over LAN (device dependent).
-*   **🔒 Zero-Trust Security**: End-to-End Encryption (AES-256-CTR) with P-521 Curve.
+*   **⚡ Fast**: Parallel, chunked transfers with encryption spread across your phone's CPU cores. Speed is usually limited by your Wi-Fi: expect roughly 3–8 MB/s on 2.4 GHz, 15–40 MB/s on 5 GHz Wi-Fi 5, and more on Wi-Fi 6.
+*   **🔒 End-to-End Encrypted**: Every file, file name and message is encrypted and authenticated with XChaCha20-Poly1305 using a one-time key shared only through the QR code.
 *   **📱 Universal Client**: Works on **any** device (iOS, Android, Mac, Linux) via browser. No app install required on the phone.
-*   **📎 Universal Clipboard**: Instantly share text/links between PC and Phone.
-*   **✨ Modern UI**: Glassmorphism design, "Mini-Mode" for unobtrusive multitasking, and fluid animations.
-*   **🐛 Built-in Bug Reporter**: Instantly shoot bug reports with pre-filled tags directly to the developer's Telegram via an integrated E2E secure reporting system.
+*   **🌬️ Built on aerodynamics**: The name comes from aerodynamics, and so does the interface: a live wind-tunnel view where real potential-flow streamlines part around your QR code and speed up with every transfer.
+*   **🖱️ Drag & drop**: Drop files anywhere on the window to send them to your phone. Mini-Mode keeps a slim bar on top while you work.
 *   **📦 Portable or Installed**: Available as a standard Windows Installer (`.exe`) or portable binary.
 
 ---
 
 ## 📥 Installation
 
-### Windows (Recommended)
-1.  Go to the [Releases Page](https://github.com/HarshalPatel1972/aero/releases).
-2.  Download **`Aero_Setup.exe`**.
-3.  Run the installer.
-4.  Launch **Aero** from your desktop or start menu.
+### Windows
+
+**[⬇ Download Aero for Windows (installer)](https://github.com/HarshalPatel1972/aero/releases/latest/download/Aero_Setup.exe)**, or grab the **[portable Aero.exe](https://github.com/HarshalPatel1972/aero/releases/latest/download/Aero.exe)** (no install needed).
+
+1.  Run `Aero_Setup.exe` and launch **Aero** from your desktop or Start menu.
+2.  Windows may show a SmartScreen notice until the app is code-signed: click **More info → Run anyway**.
+3.  Verify your download against [`checksum.sha256`](https://github.com/HarshalPatel1972/aero/releases/latest/download/checksum.sha256) if you like. All versions are on the [Releases page](https://github.com/HarshalPatel1972/aero/releases).
 
 ### Quick Start
 1.  **Launch Aero** on your PC.
@@ -44,14 +45,17 @@ Phone ↔ PC • Encrypted • Blazing Fast
 
 ## 🛡️ Security Model
 
-AERO assumes your local network is **hostile**.
+AERO assumes other devices on your network may be watching.
 
-1.  **Session Key**: Generated locally on launch (never sent to any cloud).
-2.  **Optical Exchange**: The key is transferred via QR code hash fragment (`#key`).
-3.  **E2EE**: Files are encrypted **in the browser** before they leave your phone.
-4.  **No Storage**: Keys are wiped from memory on exit.
+1.  **Session Key**: A fresh 256-bit key is generated every time you start the server, and wiped when you stop it.
+2.  **Optical Exchange**: The key travels only inside the QR code, in the URL fragment (`#k=…`), which browsers never send over the network.
+3.  **Encryption**: Every file chunk, file name and control message is sealed with XChaCha20-Poly1305 (via the audited [@noble/ciphers](https://github.com/paulmillr/noble-ciphers) library in the browser). Each chunk is bound to its transfer and position, so tampering, reordering or splicing is detected.
+4.  **Authentication**: Every request carries a single-use token derived from the key. Devices without the QR code cannot connect, upload, or download anything, and captured requests cannot be replayed.
+5.  **Least Access**: The phone can only download files you explicitly pick on the PC. Received files are saved to `Downloads\Aero` and never overwrite existing files.
 
-> **Privacy Promise**: No cloud. No tracking. No history. Your data never leaves your local network.
+**Limits, stated honestly:** the phone page is served over plain `http://` on your LAN, so an attacker who can actively intercept and modify your Wi-Fi traffic (not just observe it) could serve a tampered page. Use Aero on networks you trust, such as your home Wi-Fi, rather than public hotspots.
+
+> **Privacy Promise**: No cloud. No accounts. No history on our side. Files go directly between your devices.
 
 ---
 
@@ -78,9 +82,15 @@ wails dev
 .\scripts\build_release.ps1
 ```
 
+The version number lives in one place: `info.productVersion` in `wails.json`.
+
+### Code Signing
+Unsigned apps trigger Windows SmartScreen warnings. Buy a code-signing certificate, then set either `AERO_SIGN_PFX` + `AERO_SIGN_PASSWORD` or `AERO_SIGN_THUMBPRINT` before running the build script. See the header of `scripts/build_release.ps1`.
+
 ### Manual Artifact Generation
+*   **Frontend** (required once in a fresh clone): `cd frontend; npm ci; npm run build`
 *   **Binary Only**: `wails build -platform windows/amd64 -clean -ldflags "-s -w"`
-*   **Installer**: `makensis build\windows\installer.nsi`
+*   **Binary + Installer**: `wails build -platform windows/amd64 -clean -ldflags "-s -w" -nsis`
 *   **Icons**: `.\scripts\png2ico.ps1 -SourcePng "build\appicon.png" -DestIco "build\windows\icon.ico"`
 
 ---
@@ -92,8 +102,8 @@ wails dev
 | **Core** | Go (Golang) 1.24 |
 | **GUI** | Wails v2 + React + TypeScript |
 | **Styling** | TailwindCSS + Framer Motion |
-| **Crypto** | WebCrypto API (Frontend) + `crypto/cipher` (Backend) |
-| **Protocol** | Custom HTTP Multipart Stream over TCP |
+| **Crypto** | XChaCha20-Poly1305: `@noble/ciphers` (phone) + `golang.org/x/crypto` (PC) |
+| **Protocol** | Encrypted, authenticated chunked HTTP + WebSocket (see `internal/security/security.go`) |
 
 ---
 

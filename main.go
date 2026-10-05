@@ -24,9 +24,7 @@ package main
 
 import (
 	"embed"
-	"log"
 
-	"github.com/joho/godotenv"
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
@@ -37,29 +35,19 @@ import (
 var assets embed.FS
 
 func main() {
-	if err := godotenv.Load(); err != nil {
-		log.Println("No .env file found, continuing without it")
-	}
-
 	// Create application instance
 	app := NewApp()
 
 	// Run Wails application
 	err := wails.Run(&options.App{
-		Title:     "Aero",
-		Width:     400,
-		Height:    720,
-		
-		// REMOVE Strict constraints to allow Mini Mode (600x120)
-		// MinWidth:  400,
-		// MinHeight: 720,
-		// MaxWidth:  400,
-		// MaxHeight: 720,
+		Title:  "Aero",
+		Width:  420,
+		Height: 760,
 
-		// Frameless for custom title bar
+		// The layout is designed for fixed sizes; SetMiniMode switches between
+		// the standard (420x760) and mini (560x112) windows.
 		Frameless:         true,
-		DisableResize:     false, 
-		
+		DisableResize:     true,
 		StartHidden:       false,
 		HideWindowOnClose: false,
 
@@ -68,8 +56,14 @@ func main() {
 			Assets: assets,
 		},
 
-		// Background color (fallback when transparency not available)
-		BackgroundColour: &options.RGBA{R: 26, G: 26, B: 26, A: 255},
+		// Files dropped on the window are handled in App.startup.
+		DragAndDrop: &options.DragAndDrop{
+			EnableFileDrop:     true,
+			DisableWebViewDrop: true,
+		},
+
+		// Matches the wind-tunnel graphite so there is no flash on launch.
+		BackgroundColour: &options.RGBA{R: 11, G: 13, B: 16, A: 255},
 
 		// Lifecycle callbacks
 		OnStartup:  app.startup,

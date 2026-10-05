@@ -27,19 +27,18 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	goruntime "runtime"
 	"sync"
+	"time"
 
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 
-	"github.com/username/aero/internal/config"
-	"github.com/username/aero/internal/security"
-	"github.com/username/aero/internal/server"
-	"github.com/username/aero/internal/storage"
-	"github.com/username/aero/internal/telegram"
+	"github.com/username/aero/internal/transfer"
 	"github.com/username/aero/pkg/networking"
 )
+
+// preferredPort is tried first; the server falls back to any free port.
+const preferredPort = 8080
 
 // NetworkInterface represents a network interface for the UI.
 type NetworkInterface struct {
@@ -55,37 +54,38 @@ type ServerStatus struct {
 	Port    string `json:"port"`
 }
 
-// Note: TransferEvent is defined in server package, we use that type directly.
-
 // App struct serves as the bridge between Go backend and React frontend.
 // It holds references to the server infrastructure and manages lifecycle.
 type App struct {
-	ctx    context.Context
-	config config.Config
+	ctx         context.Context
+	downloadDir string
 
-	// Server infrastructure
-	server         *server.Server
-	storage        storage.Service
-	serverCancel   context.CancelFunc
-	serverMu       sync.Mutex
-	serverRunning  bool
-
-	// Session data
-	sessionKey       []byte
-	sessionKeyBase64 string
-	currentIP        string
+	serverMu  sync.Mutex
+	server    *transfer.Server
+	currentIP string
 }
 
 // NewApp creates a new App instance with default configuration.
 func NewApp() *App {
 	return &App{
-		config: config.Default(),
+		downloadDir: transfer.DefaultDownloadDir(),
 	}
 }
 
 // startup is called when the app starts. The context is saved for runtime calls.
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+	// Files dropped anywhere on the window are sent to the phone.
+	wailsruntime.OnFileDrop(ctx, func(_, _ int, paths []string) {
+		if err := a.SendFiles(paths); err != nil {
+			a.notice("error", err.Error())
+		}
+	})
+}
+
+// notice shows a short message in the desktop UI.
+func (a *App) notice(kind, message string) {
+	wailsruntime.EventsEmit(a.ctx, "app:notice", map[string]string{"kind": kind, "message": message})
 }
 
 // shutdown is called when the app is closing.
@@ -114,191 +114,176 @@ func (a *App) GetLocalIPs() []NetworkInterface {
 	return result
 }
 
-// StartServer initializes and starts the HTTP server on the specified IP.
-// Emits "server:started" event with the QR code URL.
+// StartServer starts the transfer server on the specified IP with a fresh
+// session key. Emits "server:started" with the QR code URL.
 func (a *App) StartServer(ip string) error {
 	a.serverMu.Lock()
 	defer a.serverMu.Unlock()
 
-	if a.serverRunning {
+	if a.server != nil {
 		return fmt.Errorf("server is already running")
 	}
 
-	// Initialize storage
-	storageService, err := storage.NewFileStorage(a.config.UploadDir)
+	srv, err := transfer.Start(transfer.Options{
+		IP:            ip,
+		PreferredPort: preferredPort,
+		DownloadDir:   a.downloadDir,
+		OnEvent:       a.onTransferEvent,
+		OnPhones: func(count int) {
+			wailsruntime.EventsEmit(a.ctx, "phone:count", count)
+		},
+		OnError: func(err error) {
+			wailsruntime.EventsEmit(a.ctx, "server:error", map[string]string{"error": err.Error()})
+		},
+	})
 	if err != nil {
-		return fmt.Errorf("failed to initialize storage: %w", err)
-	}
-	a.storage = storageService
-
-	// Generate session key
-	keyBase64, keyBytes, err := security.GenerateSessionKey()
-	if err != nil {
-		return fmt.Errorf("failed to generate session key: %w", err)
-	}
-	a.sessionKey = keyBytes
-	a.sessionKeyBase64 = keyBase64
-	a.currentIP = ip
-
-	// Create server with OUR session key (critical: must match URL key)
-	srv, err := server.NewServerWithKey(a.config, storageService, keyBytes, keyBase64, a.onTransferEvent)
-	if err != nil {
-		return fmt.Errorf("failed to create server: %w", err)
+		return err
 	}
 	a.server = srv
+	a.currentIP = ip
 
-	// Create cancellable context for server
-	ctx, cancel := context.WithCancel(context.Background())
-	a.serverCancel = cancel
-
-	// Start server in goroutine
-	go func() {
-		a.server.SetWailsContext(a.ctx) // Ensure server handles Wails events
-		if err := a.server.StartWithContext(ctx, ip); err != nil {
-			wailsruntime.EventsEmit(a.ctx, "server:error", map[string]string{
-				"error": err.Error(),
-			})
-		}
-	}()
-
-	a.serverRunning = true
-
-	// Build URL with session key in hash fragment
-	url := fmt.Sprintf("http://%s:%s/#%s", ip, a.config.Port, a.sessionKeyBase64)
-
-	// Emit event to frontend
-	wailsruntime.EventsEmit(a.ctx, "server:started", ServerStatus{
-		Running: true,
-		URL:     url,
-		IP:      ip,
-		Port:    a.config.Port,
-	})
-
+	wailsruntime.EventsEmit(a.ctx, "server:started", a.statusLocked())
 	return nil
 }
 
-// StopServer gracefully shuts down the HTTP server.
-// Emits "server:stopped" event.
+// StopServer shuts down the server, which also wipes the session key so the
+// old QR code stops working. Emits "server:stopped".
 func (a *App) StopServer() error {
 	a.serverMu.Lock()
 	defer a.serverMu.Unlock()
 
-	if !a.serverRunning {
+	if a.server == nil {
 		return nil
 	}
 
-	if a.serverCancel != nil {
-		a.serverCancel()
-	}
-
-	if a.server != nil {
-		ctx, cancel := context.WithTimeout(context.Background(), 5)
-		defer cancel()
-		a.server.Shutdown(ctx)
-	}
-
-	a.serverRunning = false
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	err := a.server.Close(ctx)
 	a.server = nil
 
 	wailsruntime.EventsEmit(a.ctx, "server:stopped", map[string]bool{
 		"running": false,
 	})
-
-	return nil
+	wailsruntime.EventsEmit(a.ctx, "phone:count", 0)
+	return err
 }
 
 // GetServerStatus returns the current server status.
 func (a *App) GetServerStatus() ServerStatus {
 	a.serverMu.Lock()
 	defer a.serverMu.Unlock()
+	return a.statusLocked()
+}
 
-	if !a.serverRunning {
+func (a *App) statusLocked() ServerStatus {
+	if a.server == nil {
 		return ServerStatus{Running: false}
 	}
-
-	url := fmt.Sprintf("http://%s:%s/#%s", a.currentIP, a.config.Port, a.sessionKeyBase64)
 	return ServerStatus{
 		Running: true,
-		URL:     url,
+		URL:     a.server.URL(),
 		IP:      a.currentIP,
-		Port:    a.config.Port,
+		Port:    a.server.Port(),
 	}
 }
 
-// OpenDownloadsFolder opens the uploads directory in the system file explorer.
+// OpenDownloadsFolder opens the folder received files are saved to.
 func (a *App) OpenDownloadsFolder() error {
-	// Get absolute path to uploads folder
-	absPath, err := filepath.Abs(a.config.UploadDir)
-	if err != nil {
+	if err := os.MkdirAll(a.downloadDir, 0o755); err != nil {
 		return err
 	}
 
-	// Ensure directory exists
-	if err := os.MkdirAll(absPath, 0755); err != nil {
-		return err
-	}
-
-	// Open folder based on OS
 	var cmd *exec.Cmd
 	switch goruntime.GOOS {
 	case "windows":
-		cmd = exec.Command("explorer", absPath)
+		cmd = exec.Command("explorer", a.downloadDir)
 	case "darwin":
-		cmd = exec.Command("open", absPath)
+		cmd = exec.Command("open", a.downloadDir)
 	default: // Linux and others
-		cmd = exec.Command("xdg-open", absPath)
+		cmd = exec.Command("xdg-open", a.downloadDir)
 	}
 
 	return cmd.Start()
 }
 
-// SubmitBugReport sends a bug report via Telegram
-func (a *App) SubmitBugReport(message string) error {
-	return telegram.SendBugReport(message)
-}
-
 // onTransferEvent is called by the server when transfer events occur.
-func (a *App) onTransferEvent(event server.TransferEvent) {
+func (a *App) onTransferEvent(event transfer.Event) {
 	if a.ctx != nil {
 		wailsruntime.EventsEmit(a.ctx, "transfer:progress", event)
 	}
 }
 
-// SendFileToPhone opens a file picker and sends the selected file to the connected phone.
+// SendFileToPhone opens a file picker and offers the selected files to the
+// connected phone. Only files picked or dropped here can ever be downloaded.
 func (a *App) SendFileToPhone() error {
-	a.serverMu.Lock()
-	if !a.serverRunning || a.server == nil {
-		a.serverMu.Unlock()
-		return fmt.Errorf("server not running")
+	if _, err := a.linkedServer(); err != nil {
+		return err
 	}
-	a.serverMu.Unlock()
-
-	// Open file dialog
-	filePath, err := wailsruntime.OpenFileDialog(a.ctx, wailsruntime.OpenDialogOptions{
-		Title: "Select file to send",
+	paths, err := wailsruntime.OpenMultipleFilesDialog(a.ctx, wailsruntime.OpenDialogOptions{
+		Title: "Choose files to send to your phone",
 	})
+	if err != nil || len(paths) == 0 {
+		return err // nil when the user cancelled
+	}
+	return a.SendFiles(paths)
+}
+
+// SendFiles offers the given files to the connected phone. Folders are skipped.
+func (a *App) SendFiles(paths []string) error {
+	srv, err := a.linkedServer()
 	if err != nil {
 		return err
 	}
-	if filePath == "" {
-		return nil // User cancelled
+	sent, skipped := 0, 0
+	for _, p := range paths {
+		if info, err := os.Stat(p); err != nil || !info.Mode().IsRegular() {
+			skipped++
+			continue
+		}
+		if err := srv.OfferFile(p); err != nil {
+			return err
+		}
+		sent++
 	}
+	if skipped > 0 {
+		a.notice("info", fmt.Sprintf("Skipped %d folder(s) — send files individually for now", skipped))
+	}
+	if sent == 0 && skipped == 0 {
+		return fmt.Errorf("nothing to send")
+	}
+	return nil
+}
 
-	// Send via server
-	return a.server.SendFileToPhone(filePath)
+func (a *App) linkedServer() (*transfer.Server, error) {
+	a.serverMu.Lock()
+	srv := a.server
+	a.serverMu.Unlock()
+	if srv == nil {
+		return nil, fmt.Errorf("start Aero first")
+	}
+	if srv.PhoneCount() == 0 {
+		return nil, fmt.Errorf("link your phone first: scan the QR code")
+	}
+	return srv, nil
+}
+
+// CancelTransfer stops a transfer in either direction. Partial data is
+// deleted on both ends, so a cancelled file is never half-saved.
+func (a *App) CancelTransfer(id string) error {
+	a.serverMu.Lock()
+	srv := a.server
+	a.serverMu.Unlock()
+	if srv == nil || !srv.Cancel(id) {
+		return fmt.Errorf("that transfer has already finished")
+	}
+	return nil
 }
 
 // IsPhoneConnected returns true if a phone is currently connected
 func (a *App) IsPhoneConnected() bool {
 	a.serverMu.Lock()
 	defer a.serverMu.Unlock()
-	
-	if !a.serverRunning || a.server == nil {
-		return false
-	}
-	
-	clients := a.server.GetConnectedClients()
-	return len(clients) > 0
+	return a.server != nil && a.server.PhoneCount() > 0
 }
 
 // SetMiniMode toggles the application between Standard and Mini configurations.
@@ -312,7 +297,7 @@ func (a *App) SetMiniMode(enabled bool) {
 		screens, err := wailsruntime.ScreenGetAll(a.ctx)
 		if err != nil || len(screens) == 0 {
 			// Fallback: bottom-right 1080p
-			wailsruntime.WindowSetSize(a.ctx, 600, 120)
+			wailsruntime.WindowSetSize(a.ctx, 560, 112)
 			return
 		}
 
@@ -329,24 +314,24 @@ func (a *App) SetMiniMode(enabled bool) {
 		}
 
 		// MINI MODE SPEC:
-		// Width: 600, Height: 120
+		// Width: 560, Height: 112
 		// Docked Bottom-Right (Approximate WorkArea due to Wails struct limitations)
-		width := 600
-		height := 120
+		width := 560
+		height := 112
 
 		// Use detected Size
 		screenWidth := 1920
 		screenHeight := 1080
-		
+
 		if primary.Size.Width > 0 {
 			screenWidth = primary.Size.Width
 			screenHeight = primary.Size.Height
 		}
 
-	// Calculate Position: Bottom-Right Dock position
-		// "Move to WorkArea.Right - 600, WorkArea.Bottom - 120"
+		// Calculate Position: Bottom-Right Dock position
+		// "Move to WorkArea.Right - width, WorkArea.Bottom - height"
 		// Assuming taskbar is ~48px height on bottom
-		
+
 		x := screenWidth - width
 		y := screenHeight - height - 48
 
@@ -354,16 +339,16 @@ func (a *App) SetMiniMode(enabled bool) {
 		wailsruntime.WindowSetSize(a.ctx, width, height)
 		wailsruntime.WindowSetPosition(a.ctx, x, y)
 		wailsruntime.WindowSetAlwaysOnTop(a.ctx, true)
-		
+
 		// Robustness: Re-apply size to fight OS animations
 		go func() {
 			goruntime.Gosched()
 			wailsruntime.WindowSetSize(a.ctx, width, height)
 		}()
-		
+
 	} else {
-		// STANDARD MODE SPEC: 400x700 Centered
-		wailsruntime.WindowSetSize(a.ctx, 400, 700)
+		// STANDARD MODE SPEC: 420x760 Centered
+		wailsruntime.WindowSetSize(a.ctx, 420, 760)
 		wailsruntime.WindowCenter(a.ctx)
 		wailsruntime.WindowSetAlwaysOnTop(a.ctx, false)
 	}
