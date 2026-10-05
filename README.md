@@ -8,7 +8,7 @@
 Phone ↔ PC • Encrypted • Blazing Fast
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Go Version](https://img.shields.io/badge/Go-1.24+-00ADD8?logo=go)](https://go.dev)
+[![Go Version](https://img.shields.io/badge/Go-1.26+-00ADD8?logo=go)](https://go.dev)
 [![Platform](https://img.shields.io/badge/Platform-Windows-blue?logo=windows)](https://github.com/HarshalPatel1972/aero/releases)
 
 </div>
@@ -62,7 +62,7 @@ AERO assumes other devices on your network may be watching.
 ## 🏗️ Build From Source
 
 ### Prerequisites
-*   [Go 1.24+](https://go.dev/dl/)
+*   [Go 1.26+](https://go.dev/dl/)
 *   [Node.js 18+](https://nodejs.org/)
 *   [Wails CLI](https://wails.io/) (`go install github.com/wailsapp/wails/v2/cmd/wails@latest`)
 *   *(Optional)* [NSIS](https://nsis.sourceforge.io/) (for building the installer)

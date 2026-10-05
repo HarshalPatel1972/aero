@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/username/aero/internal/security"
+	"github.com/HarshalPatel1972/aero/internal/security"
 )
 
 const (

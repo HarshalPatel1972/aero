@@ -33,8 +33,8 @@ import (
 
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 
-	"github.com/username/aero/internal/transfer"
-	"github.com/username/aero/pkg/networking"
+	"github.com/HarshalPatel1972/aero/internal/transfer"
+	"github.com/HarshalPatel1972/aero/pkg/networking"
 )
 
 // preferredPort is tried first; the server falls back to any free port.
