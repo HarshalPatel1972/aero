@@ -21,6 +21,11 @@ const (
 	minChunkSize = 64 << 10
 	maxChunkSize = 16 << 20
 	maxChunks    = 1 << 20
+
+	// maxBuffered bounds the out-of-order chunks held in memory per upload.
+	// Beyond it, chunks are written in place instead (slower on Windows, but
+	// memory stays bounded).
+	maxBuffered = 64 << 20
 )
 
 // upload is one phone-to-PC file in progress.
@@ -41,6 +46,50 @@ type upload struct {
 	active   time.Time
 	lastEmit time.Time
 	done     bool
+
+	// Chunks are appended to the file strictly in order. Writing past the
+	// end of a file makes NTFS zero-fill the gap first, which halved real
+	// throughput, so early arrivals wait in `early` until their turn.
+	next         int            // next chunk index to append
+	early        map[int][]byte // decrypted chunks that arrived ahead of `next`
+	earlyBytes   int
+	writtenAhead map[int]bool // chunks written in place because the buffer was full
+}
+
+// store records chunk i and appends every chunk that is now contiguous.
+// The caller must hold u.mu.
+func (u *upload) store(i int, plain []byte) error {
+	if i != u.next {
+		if u.earlyBytes+len(plain) <= maxBuffered {
+			u.early[i] = plain
+			u.earlyBytes += len(plain)
+			return nil
+		}
+		if _, err := u.file.WriteAt(plain, int64(i)*int64(u.chunkSize)); err != nil {
+			return err
+		}
+		u.writtenAhead[i] = true
+		return nil
+	}
+	if _, err := u.file.WriteAt(plain, int64(i)*int64(u.chunkSize)); err != nil {
+		return err
+	}
+	u.next++
+	for u.next < u.total {
+		if buf, ok := u.early[u.next]; ok {
+			if _, err := u.file.WriteAt(buf, int64(u.next)*int64(u.chunkSize)); err != nil {
+				return err
+			}
+			delete(u.early, u.next)
+			u.earlyBytes -= len(buf)
+		} else if u.writtenAhead[u.next] {
+			delete(u.writtenAhead, u.next)
+		} else {
+			break
+		}
+		u.next++
+	}
+	return nil
 }
 
 func (u *upload) lastActivity() time.Time {
@@ -111,13 +160,6 @@ func (s *Server) handleUploadInit(w http.ResponseWriter, r *http.Request) {
 	id := newID()
 	part := s.partPath(id)
 	f, err := os.OpenFile(part, os.O_CREATE|os.O_EXCL|os.O_RDWR, 0o644)
-	if err == nil {
-		err = f.Truncate(req.Size)
-		if err != nil {
-			f.Close()
-			os.Remove(part)
-		}
-	}
 	if err != nil {
 		s.mu.Unlock()
 		log.Printf("[AERO] Cannot create upload file: %v", err)
@@ -129,12 +171,13 @@ func (s *Server) handleUploadInit(w http.ResponseWriter, r *http.Request) {
 		id: id, name: SanitizeFilename(req.Name), size: req.Size, chunkSize: req.ChunkSize,
 		total: total, part: part, file: f, started: now,
 		received: make([]bool, total), active: now,
+		early: make(map[int][]byte), writtenAhead: make(map[int]bool),
 	}
 	s.uploads[id] = u
 	s.mu.Unlock()
 
 	log.Printf("[AERO] Receiving %q (%d bytes, %d chunks)", u.name, u.size, u.total)
-	s.emit(Event{Filename: u.name, Status: "started", Direction: "receive"})
+	s.emit(Event{ID: u.id, Filename: u.name, Size: u.size, Status: "started", Direction: "receive"})
 	writeJSON(w, map[string]any{"id": id, "totalChunks": total})
 }
 
@@ -145,7 +188,8 @@ func (s *Server) handleUploadChunk(w http.ResponseWriter, r *http.Request) {
 	u := s.uploads[r.PathValue("id")]
 	s.mu.Unlock()
 	if u == nil {
-		http.Error(w, "unknown upload", http.StatusNotFound)
+		// Gone, not 404: the phone must stop rather than retry.
+		http.Error(w, "upload cancelled or expired", http.StatusGone)
 		return
 	}
 	index, err := strconv.Atoi(r.PathValue("index"))
@@ -168,11 +212,6 @@ func (s *Server) handleUploadChunk(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "wrong chunk length", http.StatusBadRequest)
 		return
 	}
-	if _, err := u.file.WriteAt(plain, int64(index)*int64(u.chunkSize)); err != nil {
-		log.Printf("[AERO] Write failed for %q: %v", u.name, err)
-		http.Error(w, "write failed (is the disk full?)", http.StatusInsufficientStorage)
-		return
-	}
 
 	u.mu.Lock()
 	if u.done {
@@ -181,6 +220,17 @@ func (s *Server) handleUploadChunk(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !u.received[index] {
+		if err := u.store(index, plain); err != nil {
+			u.mu.Unlock()
+			log.Printf("[AERO] Write failed for %q: %v", u.name, err)
+			s.mu.Lock()
+			delete(s.uploads, u.id)
+			s.mu.Unlock()
+			u.abort()
+			s.emit(Event{ID: u.id, Filename: u.name, Size: u.size, Status: "error", Direction: "receive"})
+			http.Error(w, "write failed (is the disk full?)", http.StatusInsufficientStorage)
+			return
+		}
 		u.received[index] = true
 		u.count++
 		u.bytes += int64(len(plain))
@@ -200,7 +250,7 @@ func (s *Server) handleUploadChunk(w http.ResponseWriter, r *http.Request) {
 	u.mu.Unlock()
 
 	if emitProgress {
-		s.emit(Event{Filename: u.name, Status: "progress", Progress: progress, Speed: speed, Direction: "receive"})
+		s.emit(Event{ID: u.id, Filename: u.name, Size: u.size, Status: "progress", Progress: progress, Speed: speed, Direction: "receive"})
 	}
 	if !complete {
 		writeJSON(w, map[string]any{"complete": false})
@@ -215,12 +265,12 @@ func (s *Server) handleUploadChunk(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("[AERO] Finalize failed for %q: %v", u.name, err)
 		os.Remove(u.part)
-		s.emit(Event{Filename: u.name, Status: "error", Direction: "receive"})
+		s.emit(Event{ID: u.id, Filename: u.name, Size: u.size, Status: "error", Direction: "receive"})
 		http.Error(w, "could not save file", http.StatusInternalServerError)
 		return
 	}
 	log.Printf("[AERO] Saved %q (%s)", finalName, speed)
-	s.emit(Event{Filename: u.name, Status: "completed", Progress: 100, Speed: speed, Direction: "receive"})
+	s.emit(Event{ID: u.id, Filename: u.name, Size: u.size, Status: "completed", Progress: 100, Speed: speed, Direction: "receive"})
 	writeJSON(w, map[string]any{"complete": true})
 }
 
@@ -246,7 +296,8 @@ func (s *Server) handleUploadCancel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	u.abort()
-	s.emit(Event{Filename: u.name, Status: "error", Direction: "receive"})
+	s.emit(Event{ID: u.id, Filename: u.name, Size: u.size, Status: "cancelled", Direction: "receive"})
+	log.Printf("[AERO] Upload %q cancelled on the phone; partial data deleted", u.name)
 	w.WriteHeader(http.StatusNoContent)
 }
 

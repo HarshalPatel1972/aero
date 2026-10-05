@@ -102,6 +102,16 @@ Pop-Location
 Write-Ok "Frontend built"
 
 # ---------------------------------------------------------------------------
+Write-Step "Applying app icon"
+# build/ is generated and not committed; without this Wails falls back to its
+# default icon. The committed source of truth is assets/.
+New-Item -ItemType Directory -Force (Join-Path $PROJECT_ROOT "build\windows") | Out-Null
+Copy-Item -Force (Join-Path $PROJECT_ROOT "assets\appicon.png") (Join-Path $PROJECT_ROOT "build\appicon.png")
+Copy-Item -Force (Join-Path $PROJECT_ROOT "assets\icon.ico") (Join-Path $PROJECT_ROOT "build\windows\icon.ico")
+Write-Ok "Icon copied from assets/"
+
+
+# ---------------------------------------------------------------------------
 Write-Step "Building application"
 $buildArgs = @("build", "-clean", "-platform", "windows/amd64", "-ldflags", "-s -w", "-trimpath")
 if ($makensis) { $buildArgs += "-nsis" }

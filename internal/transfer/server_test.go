@@ -120,9 +120,8 @@ func TestUploadSavesSafelyAndNeverOverwrites(t *testing.T) {
 	if err != nil || !bytes.Equal(got, data[:10]) {
 		t.Fatalf("second upload should not overwrite: err=%v", err)
 	}
-	entries, _ := os.ReadDir(s.dir)
-	if len(entries) != 2 {
-		t.Errorf("expected exactly 2 files in download dir, got %d", len(entries))
+	if names := visibleFiles(t, s.dir); len(names) != 2 {
+		t.Errorf("expected exactly 2 files in download dir, got %v", names)
 	}
 }
 
@@ -141,6 +140,7 @@ func TestAPIRequiresAuth(t *testing.T) {
 		{"PUT", "/api/upload/x/0"},
 		{"DELETE", "/api/upload/x"},
 		{"GET", "/api/download/x/0"},
+		{"DELETE", "/api/download/x"},
 		{"GET", "/api/ws"},
 	} {
 		if res := c.do(r.method, r.path, nil, false); res.StatusCode != http.StatusUnauthorized {
@@ -206,9 +206,11 @@ func TestCancelAndCloseRemovePartialFiles(t *testing.T) {
 	c.initUpload("big2.bin", 1<<20, minChunkSize)
 	s.Close(context.Background())
 
-	entries, _ := os.ReadDir(s.dir)
-	for _, e := range entries {
-		t.Errorf("leftover file after cancel/close: %s", e.Name())
+	if names := visibleFiles(t, s.dir); len(names) != 0 {
+		t.Errorf("leftover files after cancel/close: %v", names)
+	}
+	if staged, _ := os.ReadDir(filepath.Join(s.dir, stagingDirName)); len(staged) != 0 {
+		t.Errorf("partial data left in staging: %d files", len(staged))
 	}
 }
 
@@ -302,9 +304,9 @@ func TestDownloadOfferedFile(t *testing.T) {
 		t.Fatalf("offer not sealed correctly: %v", err)
 	}
 	var offer struct {
-		Type, ID, Name    string
-		Size              int64
-		TotalChunks       int
+		Type, ID, Name string
+		Size           int64
+		TotalChunks    int
 	}
 	json.Unmarshal(plain, &offer)
 	if offer.Type != "offer" || offer.Name != "report.pdf" || offer.Size != int64(len(data)) || offer.TotalChunks != 2 {
@@ -353,5 +355,119 @@ func TestSanitizeFilename(t *testing.T) {
 	long := strings.Repeat("é", 300) + ".mp4"
 	if got := SanitizeFilename(long); len(got) > maxNameBytes || !strings.HasSuffix(got, ".mp4") {
 		t.Errorf("long name: len=%d %q", len(got), got[len(got)-8:])
+	}
+}
+
+// visibleFiles lists what the user would see in the download folder.
+func visibleFiles(t *testing.T, dir string) []string {
+	t.Helper()
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var names []string
+	for _, e := range entries {
+		if e.Name() != stagingDirName {
+			names = append(names, e.Name())
+		}
+	}
+	return names
+}
+
+func TestStartClearsStaleStaging(t *testing.T) {
+	dir := t.TempDir()
+	stale := filepath.Join(dir, stagingDirName, "crashed.part")
+	os.MkdirAll(filepath.Dir(stale), 0o755)
+	os.WriteFile(stale, []byte("half a movie"), 0o644)
+
+	s, err := Start(Options{IP: "127.0.0.1", DownloadDir: dir})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close(context.Background())
+	if _, err := os.Stat(stale); !os.IsNotExist(err) {
+		t.Errorf("stale partial file survived restart: %v", err)
+	}
+}
+
+func TestPartialUploadIsNeverVisible(t *testing.T) {
+	s, c := startTestServer(t)
+	id, total := c.initUpload("movie.mp4", int64(minChunkSize)*3, minChunkSize)
+	for i := 0; i < total-1; i++ { // everything but the last chunk: 66%
+		res := c.do("PUT", fmt.Sprintf("/api/upload/%s/%d", id, i), c.seal(randomBytes(minChunkSize), security.UploadChunkAAD(id, i, total)), true)
+		if res.StatusCode != 200 {
+			t.Fatalf("chunk %d: %d", i, res.StatusCode)
+		}
+	}
+	if names := visibleFiles(t, s.dir); len(names) != 0 {
+		t.Errorf("partial upload visible to the user: %v", names)
+	}
+}
+
+func TestPCCancelStopsUploadAndTellsPhone(t *testing.T) {
+	s, c := startTestServer(t)
+	conn, err := c.dialWS("http://" + s.hostport)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+	for s.PhoneCount() == 0 {
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	id, total := c.initUpload("movie.mp4", int64(minChunkSize)*4, minChunkSize)
+	c.do("PUT", fmt.Sprintf("/api/upload/%s/0", id), c.seal(randomBytes(minChunkSize), security.UploadChunkAAD(id, 0, total)), true)
+
+	if !s.Cancel(id) {
+		t.Fatal("Cancel returned false")
+	}
+	conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+	_, box, err := conn.ReadMessage()
+	if err != nil {
+		t.Fatal(err)
+	}
+	plain, err := s.session.Open(box, security.WSServerAAD())
+	if err != nil || !strings.Contains(string(plain), `"cancel"`) || !strings.Contains(string(plain), id) {
+		t.Errorf("phone not told about cancel: %s %v", plain, err)
+	}
+	res := c.do("PUT", fmt.Sprintf("/api/upload/%s/1", id), c.seal(randomBytes(minChunkSize), security.UploadChunkAAD(id, 1, total)), true)
+	if res.StatusCode != http.StatusGone {
+		t.Errorf("chunk after cancel: %d, want 410", res.StatusCode)
+	}
+	if staged, _ := os.ReadDir(filepath.Join(s.dir, stagingDirName)); len(staged) != 0 {
+		t.Errorf("partial data left after cancel: %d files", len(staged))
+	}
+	if s.Cancel(id) {
+		t.Error("second Cancel should report nothing to cancel")
+	}
+}
+
+func TestPhoneCancelsDownload(t *testing.T) {
+	s, c := startTestServer(t)
+	conn, err := c.dialWS("http://" + s.hostport)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+	for s.PhoneCount() == 0 {
+		time.Sleep(10 * time.Millisecond)
+	}
+	src := filepath.Join(t.TempDir(), "a.bin")
+	os.WriteFile(src, randomBytes(1000), 0o644)
+	if err := s.OfferFile(src); err != nil {
+		t.Fatal(err)
+	}
+	s.mu.Lock()
+	var id string
+	for k := range s.downloads {
+		id = k
+	}
+	s.mu.Unlock()
+
+	if res := c.do("DELETE", "/api/download/"+id, nil, true); res.StatusCode != http.StatusNoContent {
+		t.Fatalf("cancel: %d", res.StatusCode)
+	}
+	if res := c.do("GET", "/api/download/"+id+"/0", nil, true); res.StatusCode != http.StatusGone {
+		t.Errorf("chunk after cancel: %d, want 410", res.StatusCode)
 	}
 }

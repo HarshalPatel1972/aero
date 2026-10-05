@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strconv"
+	"sync"
 	"testing"
 	"time"
 )
@@ -24,9 +26,18 @@ func TestManualE2E(t *testing.T) {
 	if dir == "" {
 		dir = t.TempDir()
 	}
+	// AERO_E2E_PC_CANCEL_AT=<percent> cancels an incoming upload from the PC side.
+	cancelAt, _ := strconv.ParseFloat(os.Getenv("AERO_E2E_PC_CANCEL_AT"), 64)
+	var s *Server
+	var cancelOnce sync.Once
 	s, err := Start(Options{
 		IP: "127.0.0.1", DownloadDir: dir,
-		OnEvent: func(e Event) { fmt.Printf("EVENT %s %s %s %.0f%% %s\n", e.Direction, e.Status, e.Filename, e.Progress, e.Speed) },
+		OnEvent: func(e Event) {
+			fmt.Printf("EVENT %s %s %s %.0f%% %s\n", e.Direction, e.Status, e.Filename, e.Progress, e.Speed)
+			if cancelAt > 0 && e.Status == "progress" && e.Progress >= cancelAt {
+				cancelOnce.Do(func() { go s.Cancel(e.ID) })
+			}
+		},
 	})
 	if err != nil {
 		t.Fatal(err)

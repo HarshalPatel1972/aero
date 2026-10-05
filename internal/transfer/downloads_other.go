@@ -14,3 +14,6 @@ func userDownloadsDir() (string, error) {
 	}
 	return filepath.Join(home, "Downloads"), nil
 }
+
+// hidePath is a no-op: the leading dot already hides the folder.
+func hidePath(string) {}

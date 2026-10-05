@@ -42,6 +42,12 @@ func (s *Server) PhoneCount() int {
 	return len(s.phones)
 }
 
+func (s *Server) notifyPhones(count int) {
+	if s.onPhones != nil {
+		s.onPhones(count)
+	}
+}
+
 func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 	upgrader := websocket.Upgrader{
 		// Only the page this server served may open the socket.
@@ -57,15 +63,19 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 	p := &phone{conn: conn, send: make(chan []byte, 16)}
 	s.mu.Lock()
 	s.phones[p] = struct{}{}
+	count := len(s.phones)
 	s.mu.Unlock()
 	log.Printf("[AERO] Phone connected")
+	s.notifyPhones(count)
 
 	defer func() {
 		s.mu.Lock()
 		delete(s.phones, p)
+		count := len(s.phones)
 		s.mu.Unlock()
 		p.close()
 		log.Printf("[AERO] Phone disconnected")
+		s.notifyPhones(count)
 	}()
 
 	go s.writePump(p)

@@ -75,6 +75,17 @@ func NewApp() *App {
 // startup is called when the app starts. The context is saved for runtime calls.
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+	// Files dropped anywhere on the window are sent to the phone.
+	wailsruntime.OnFileDrop(ctx, func(_, _ int, paths []string) {
+		if err := a.SendFiles(paths); err != nil {
+			a.notice("error", err.Error())
+		}
+	})
+}
+
+// notice shows a short message in the desktop UI.
+func (a *App) notice(kind, message string) {
+	wailsruntime.EventsEmit(a.ctx, "app:notice", map[string]string{"kind": kind, "message": message})
 }
 
 // shutdown is called when the app is closing.
@@ -118,6 +129,9 @@ func (a *App) StartServer(ip string) error {
 		PreferredPort: preferredPort,
 		DownloadDir:   a.downloadDir,
 		OnEvent:       a.onTransferEvent,
+		OnPhones: func(count int) {
+			wailsruntime.EventsEmit(a.ctx, "phone:count", count)
+		},
 		OnError: func(err error) {
 			wailsruntime.EventsEmit(a.ctx, "server:error", map[string]string{"error": err.Error()})
 		},
@@ -150,6 +164,7 @@ func (a *App) StopServer() error {
 	wailsruntime.EventsEmit(a.ctx, "server:stopped", map[string]bool{
 		"running": false,
 	})
+	wailsruntime.EventsEmit(a.ctx, "phone:count", 0)
 	return err
 }
 
@@ -198,30 +213,70 @@ func (a *App) onTransferEvent(event transfer.Event) {
 	}
 }
 
-// SendFileToPhone opens a file picker and offers the selected file to the
-// connected phone. Only files picked here can ever be downloaded by the phone.
+// SendFileToPhone opens a file picker and offers the selected files to the
+// connected phone. Only files picked or dropped here can ever be downloaded.
 func (a *App) SendFileToPhone() error {
+	if _, err := a.linkedServer(); err != nil {
+		return err
+	}
+	paths, err := wailsruntime.OpenMultipleFilesDialog(a.ctx, wailsruntime.OpenDialogOptions{
+		Title: "Choose files to send to your phone",
+	})
+	if err != nil || len(paths) == 0 {
+		return err // nil when the user cancelled
+	}
+	return a.SendFiles(paths)
+}
+
+// SendFiles offers the given files to the connected phone. Folders are skipped.
+func (a *App) SendFiles(paths []string) error {
+	srv, err := a.linkedServer()
+	if err != nil {
+		return err
+	}
+	sent, skipped := 0, 0
+	for _, p := range paths {
+		if info, err := os.Stat(p); err != nil || !info.Mode().IsRegular() {
+			skipped++
+			continue
+		}
+		if err := srv.OfferFile(p); err != nil {
+			return err
+		}
+		sent++
+	}
+	if skipped > 0 {
+		a.notice("info", fmt.Sprintf("Skipped %d folder(s) — send files individually for now", skipped))
+	}
+	if sent == 0 && skipped == 0 {
+		return fmt.Errorf("nothing to send")
+	}
+	return nil
+}
+
+func (a *App) linkedServer() (*transfer.Server, error) {
 	a.serverMu.Lock()
 	srv := a.server
 	a.serverMu.Unlock()
 	if srv == nil {
-		return fmt.Errorf("server not running")
+		return nil, fmt.Errorf("start Aero first")
 	}
 	if srv.PhoneCount() == 0 {
-		return transfer.ErrNoPhone
+		return nil, fmt.Errorf("link your phone first: scan the QR code")
 	}
+	return srv, nil
+}
 
-	filePath, err := wailsruntime.OpenFileDialog(a.ctx, wailsruntime.OpenDialogOptions{
-		Title: "Select file to send",
-	})
-	if err != nil {
-		return err
+// CancelTransfer stops a transfer in either direction. Partial data is
+// deleted on both ends, so a cancelled file is never half-saved.
+func (a *App) CancelTransfer(id string) error {
+	a.serverMu.Lock()
+	srv := a.server
+	a.serverMu.Unlock()
+	if srv == nil || !srv.Cancel(id) {
+		return fmt.Errorf("that transfer has already finished")
 	}
-	if filePath == "" {
-		return nil // User cancelled
-	}
-
-	return srv.OfferFile(filePath)
+	return nil
 }
 
 // IsPhoneConnected returns true if a phone is currently connected
@@ -242,7 +297,7 @@ func (a *App) SetMiniMode(enabled bool) {
 		screens, err := wailsruntime.ScreenGetAll(a.ctx)
 		if err != nil || len(screens) == 0 {
 			// Fallback: bottom-right 1080p
-			wailsruntime.WindowSetSize(a.ctx, 600, 120)
+			wailsruntime.WindowSetSize(a.ctx, 560, 112)
 			return
 		}
 
@@ -259,24 +314,24 @@ func (a *App) SetMiniMode(enabled bool) {
 		}
 
 		// MINI MODE SPEC:
-		// Width: 600, Height: 120
+		// Width: 560, Height: 112
 		// Docked Bottom-Right (Approximate WorkArea due to Wails struct limitations)
-		width := 600
-		height := 120
+		width := 560
+		height := 112
 
 		// Use detected Size
 		screenWidth := 1920
 		screenHeight := 1080
-		
+
 		if primary.Size.Width > 0 {
 			screenWidth = primary.Size.Width
 			screenHeight = primary.Size.Height
 		}
 
-	// Calculate Position: Bottom-Right Dock position
-		// "Move to WorkArea.Right - 600, WorkArea.Bottom - 120"
+		// Calculate Position: Bottom-Right Dock position
+		// "Move to WorkArea.Right - width, WorkArea.Bottom - height"
 		// Assuming taskbar is ~48px height on bottom
-		
+
 		x := screenWidth - width
 		y := screenHeight - height - 48
 
@@ -284,16 +339,16 @@ func (a *App) SetMiniMode(enabled bool) {
 		wailsruntime.WindowSetSize(a.ctx, width, height)
 		wailsruntime.WindowSetPosition(a.ctx, x, y)
 		wailsruntime.WindowSetAlwaysOnTop(a.ctx, true)
-		
+
 		// Robustness: Re-apply size to fight OS animations
 		go func() {
 			goruntime.Gosched()
 			wailsruntime.WindowSetSize(a.ctx, width, height)
 		}()
-		
+
 	} else {
-		// STANDARD MODE SPEC: 400x700 Centered
-		wailsruntime.WindowSetSize(a.ctx, 400, 700)
+		// STANDARD MODE SPEC: 420x760 Centered
+		wailsruntime.WindowSetSize(a.ctx, 420, 760)
 		wailsruntime.WindowCenter(a.ctx)
 		wailsruntime.WindowSetAlwaysOnTop(a.ctx, false)
 	}

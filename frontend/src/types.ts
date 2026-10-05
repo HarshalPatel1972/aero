@@ -1,5 +1,4 @@
-// Type definitions for Wails runtime and App bindings
-// Strict TypeScript - no 'any' types
+// Type definitions for the Wails runtime and App bindings.
 
 export interface NetworkInterface {
   name: string;
@@ -13,26 +12,31 @@ export interface ServerStatus {
   port: string;
 }
 
+export type TransferStatus = 'started' | 'progress' | 'completed' | 'cancelled' | 'error';
+export type Direction = 'send' | 'receive';
+
+/** Emitted by the Go server as "transfer:progress". */
 export interface TransferEvent {
+  id: string;
   filename: string;
+  size: number;
   progress: number;
   speed: string;
-  status: 'started' | 'progress' | 'completed' | 'error';
+  status: TransferStatus;
+  direction: Direction;
 }
 
-// Wails runtime types
+export interface Notice {
+  kind: 'info' | 'error' | 'success';
+  message: string;
+}
+
 declare global {
   interface Window {
     runtime: {
-      EventsOn: (eventName: string, callback: (data: unknown) => void) => void;
+      EventsOn: (eventName: string, callback: (data: unknown) => void) => () => void;
       EventsOff: (eventName: string) => void;
       WindowMinimise: () => void;
-      WindowToggleMaximise: () => void;
-      WindowClose: () => void;
-      WindowSetAlwaysOnTop: (alwaysOnTop: boolean) => void;
-      WindowSetSize: (width: number, height: number) => void;
-      WindowSetPosition: (x: number, y: number) => void;
-      WindowCenter: () => void;
       Quit: () => void;
     };
     go: {
@@ -44,7 +48,10 @@ declare global {
           GetServerStatus: () => Promise<ServerStatus>;
           OpenDownloadsFolder: () => Promise<void>;
           SendFileToPhone: () => Promise<void>;
+          SendFiles: (paths: string[]) => Promise<void>;
+          CancelTransfer: (id: string) => Promise<void>;
           IsPhoneConnected: () => Promise<boolean>;
+          SetMiniMode: (enabled: boolean) => Promise<void>;
         };
       };
     };

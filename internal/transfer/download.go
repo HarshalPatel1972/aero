@@ -80,7 +80,7 @@ func (s *Server) OfferFile(path string) error {
 		"chunkSize": d.chunkSize, "totalChunks": d.total,
 	})
 	log.Printf("[AERO] Offered %q to phone (%d bytes)", d.name, d.size)
-	s.emit(Event{Filename: d.name, Status: "started", Direction: "send"})
+	s.emit(Event{ID: d.id, Filename: d.name, Size: d.size, Status: "started", Direction: "send"})
 	return nil
 }
 
@@ -90,7 +90,7 @@ func (s *Server) handleDownloadChunk(w http.ResponseWriter, r *http.Request) {
 	d := s.downloads[r.PathValue("id")]
 	s.mu.Unlock()
 	if d == nil {
-		http.Error(w, "unknown or expired download", http.StatusNotFound)
+		http.Error(w, "download cancelled or expired", http.StatusGone)
 		return
 	}
 	index, err := strconv.Atoi(r.PathValue("index"))
@@ -150,8 +150,23 @@ func (s *Server) handleDownloadChunk(w http.ResponseWriter, r *http.Request) {
 
 	switch {
 	case complete:
-		s.emit(Event{Filename: d.name, Status: "completed", Progress: 100, Speed: speed, Direction: "send"})
+		s.emit(Event{ID: d.id, Filename: d.name, Size: d.size, Status: "completed", Progress: 100, Speed: speed, Direction: "send"})
 	case emitProgress:
-		s.emit(Event{Filename: d.name, Status: "progress", Progress: progress, Speed: speed, Direction: "send"})
+		s.emit(Event{ID: d.id, Filename: d.name, Size: d.size, Status: "progress", Progress: progress, Speed: speed, Direction: "send"})
 	}
+}
+
+// handleDownloadCancel is called when the phone gives up on a file the PC
+// offered. The phone discards what it received, so nothing partial is saved.
+func (s *Server) handleDownloadCancel(w http.ResponseWriter, r *http.Request) {
+	s.mu.Lock()
+	d := s.downloads[r.PathValue("id")]
+	delete(s.downloads, r.PathValue("id"))
+	s.mu.Unlock()
+	if d == nil {
+		http.Error(w, "unknown download", http.StatusNotFound)
+		return
+	}
+	s.emit(Event{ID: d.id, Filename: d.name, Size: d.size, Status: "cancelled", Direction: "send"})
+	w.WriteHeader(http.StatusNoContent)
 }

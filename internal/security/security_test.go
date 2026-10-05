@@ -96,8 +96,8 @@ func TestJavaScriptInterop(t *testing.T) {
 		t.Fatal(err)
 	}
 	var v struct {
-		Key   string
-		Token struct{ Method, Path, Value string }
+		Key        string
+		Token      struct{ Method, Path, Value string }
 		UploadInit struct {
 			Plain, Box string
 		}

@@ -17,21 +17,24 @@ Phone ↔ PC • Encrypted • Blazing Fast
 
 ## 🚀 Features
 
-*   **⚡ Fast**: Parallel, chunked transfers over your local network (speed depends on your Wi-Fi and phone).
+*   **⚡ Fast**: Parallel, chunked transfers with encryption spread across your phone's CPU cores. Speed is usually limited by your Wi-Fi: expect roughly 3–8 MB/s on 2.4 GHz, 15–40 MB/s on 5 GHz Wi-Fi 5, and more on Wi-Fi 6.
 *   **🔒 End-to-End Encrypted**: Every file, file name and message is encrypted and authenticated with XChaCha20-Poly1305 using a one-time key shared only through the QR code.
 *   **📱 Universal Client**: Works on **any** device (iOS, Android, Mac, Linux) via browser. No app install required on the phone.
-*   **✨ Modern UI**: "Mini-Mode" for unobtrusive multitasking, and fluid animations.
+*   **🌬️ Built on aerodynamics**: The name comes from aerodynamics, and so does the interface: a live wind-tunnel view where real potential-flow streamlines part around your QR code and speed up with every transfer.
+*   **🖱️ Drag & drop**: Drop files anywhere on the window to send them to your phone. Mini-Mode keeps a slim bar on top while you work.
 *   **📦 Portable or Installed**: Available as a standard Windows Installer (`.exe`) or portable binary.
 
 ---
 
 ## 📥 Installation
 
-### Windows (Recommended)
-1.  Go to the [Releases Page](https://github.com/HarshalPatel1972/aero/releases).
-2.  Download **`Aero_Setup.exe`**.
-3.  Run the installer.
-4.  Launch **Aero** from your desktop or start menu.
+### Windows
+
+**[⬇ Download Aero for Windows (installer)](https://github.com/HarshalPatel1972/aero/releases/latest/download/Aero_Setup.exe)**, or grab the **[portable Aero.exe](https://github.com/HarshalPatel1972/aero/releases/latest/download/Aero.exe)** (no install needed).
+
+1.  Run `Aero_Setup.exe` and launch **Aero** from your desktop or Start menu.
+2.  Windows may show a SmartScreen notice until the app is code-signed: click **More info → Run anyway**.
+3.  Verify your download against [`checksum.sha256`](https://github.com/HarshalPatel1972/aero/releases/latest/download/checksum.sha256) if you like. All versions are on the [Releases page](https://github.com/HarshalPatel1972/aero/releases).
 
 ### Quick Start
 1.  **Launch Aero** on your PC.

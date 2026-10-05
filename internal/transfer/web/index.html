@@ -1,543 +1,310 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#050505">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0b0d10">
+    <meta name="color-scheme" content="dark">
     <title>Aero</title>
-    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3CclipPath id='c'%3E%3Crect x='2' y='2' width='60' height='60' rx='14'/%3E%3C/clipPath%3E%3C/defs%3E%3Crect x='2' y='2' width='60' height='60' rx='14' fill='%230E1114'/%3E%3Cg clip-path='url(%23c)'%3E%3Cg transform='translate(32 33) scale(0.74) translate(-32 -32)'%3E%3Cpath d='M5 55C11.5 55 25.76 17 32 8C38.24 17 52.5 55 59 55' fill='none' stroke='%23E8ECF0' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M-4 41.2C12 41.2 22 38.8 32 38.8S52 41.2 68 41.2' fill='none' stroke='%23FF5B1F' stroke-width='5' stroke-linecap='round'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E">
     <style>
-        :root {
-            --bg-base: #F4F1EA;
-            --grid-color: rgba(0, 0, 0, 0.05);
-            --primary: #C85A27;
-            --text-main: #111111;
-            --border-width: 2px;
-            --shadow-offset: 4px;
+        @font-face {
+            font-family: 'Archivo';
+            src: url('/fonts/archivo.woff2') format('woff2-variations');
+            font-weight: 100 900;
+            font-stretch: 62% 125%;
+            font-display: swap;
+        }
+        @font-face {
+            font-family: 'JetBrains Mono';
+            src: url('/fonts/jetbrains-mono.woff2') format('woff2-variations');
+            font-weight: 100 800;
+            font-display: swap;
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        :root {
+            --bg: #0b0d10;
+            --raised: #111419;
+            --panel: rgba(255, 255, 255, 0.025);
+            --hairline: rgba(232, 236, 240, 0.08);
+            --hairline-strong: rgba(232, 236, 240, 0.16);
+            --smoke: #e8ecf0;
+            --smoke-2: #a2abb5;
+            --smoke-3: #646d77;
+            --smoke-4: #3a4048;
+            --signal: #ff5b1f;
+            --signal-soft: rgba(255, 91, 31, 0.14);
+            --signal-glow: rgba(255, 91, 31, 0.35);
+            --danger: #ff5a64;
+            --ease: cubic-bezier(0.22, 1, 0.36, 1);
+            --mono: 'JetBrains Mono', ui-monospace, monospace;
         }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
         html, body {
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background-color: var(--bg-base);
-            /* Subtle Grid Background */
-            background-image: 
-                linear-gradient(var(--grid-color) 1px, transparent 1px),
-                linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
-            background-size: 20px 20px;
-            font-family: 'Space Mono', monospace;
-            color: var(--text-main);
-            position: relative;
+            min-height: 100%;
+            background: var(--bg);
+            color: var(--smoke);
+            font-family: 'Archivo', system-ui, sans-serif;
+            -webkit-font-smoothing: antialiased;
         }
+
+        body {
+            background:
+                radial-gradient(120% 50% at 50% 30%, rgba(255, 255, 255, 0.04), transparent 70%),
+                var(--bg);
+        }
+
+        button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+        :focus-visible { outline: 2px solid var(--signal); outline-offset: 3px; border-radius: 8px; }
 
         .app {
+            max-width: 480px;
+            margin: 0 auto;
+            min-height: 100dvh;
             display: flex;
             flex-direction: column;
-            height: 100%;
-            padding: 24px;
-            padding-top: calc(env(safe-area-inset-top, 24px) + 24px);
-            padding-bottom: env(safe-area-inset-bottom, 24px);
+            padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
         }
 
-        /* Brutalist Title Bar */
-        .title-bar {
+        .label {
+            font-family: var(--mono);
+            font-size: 10.5px;
+            font-weight: 500;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            color: var(--smoke-3);
+        }
+        .display { font-weight: 640; font-stretch: 112%; letter-spacing: -0.01em; line-height: 1.08; }
+
+        /* Header */
+        header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 12px 16px;
-            background: #fff;
-            border: var(--border-width) solid var(--text-main);
-            box-shadow: var(--shadow-offset) var(--shadow-offset) 0 0 var(--text-main);
-            margin-bottom: 40px;
+            padding: 16px 20px;
         }
+        .brand { display: flex; align-items: center; gap: 10px; }
+        .wordmark { font-weight: 760; font-stretch: 125%; letter-spacing: 0.16em; font-size: 14px; }
 
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .logo-icon {
-            width: 32px;
-            height: 32px;
-            background: var(--primary);
-            border: var(--border-width) solid var(--text-main);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            font-size: 18px;
-            color: #fff;
-            font-family: 'Anton', sans-serif;
-        }
-
-        .logo-text {
-            font-family: 'Anton', sans-serif;
-            font-size: 24px;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-        }
-
-        .connection-badge {
-            display: flex;
+        .pill {
+            display: inline-flex;
             align-items: center;
             gap: 8px;
-            padding: 6px 12px;
-            background: #fff;
-            border: var(--border-width) solid var(--text-main);
-            font-size: 12px;
-            font-weight: 700;
-            color: var(--text-main);
+            height: 30px;
+            padding: 0 12px 0 10px;
+            border-radius: 999px;
+            border: 1px solid var(--hairline);
+            background: var(--panel);
+            font-family: var(--mono);
+            font-size: 10.5px;
+            letter-spacing: 0.12em;
             text-transform: uppercase;
+            color: var(--smoke-2);
         }
+        .pill .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--smoke-4); transition: background .4s var(--ease); }
+        .pill[data-state='connecting'] .dot { background: var(--smoke-2); animation: blink 1.2s ease-in-out infinite; }
+        .pill[data-state='connected'] .dot { background: var(--signal); animation: beacon 2.4s var(--ease) infinite; }
+        .pill[data-state='disconnected'] .dot { background: var(--danger); }
+        @keyframes blink { 50% { opacity: .3; } }
+        @keyframes beacon { 0%, 100% { box-shadow: 0 0 0 0 var(--signal-glow); } 60% { box-shadow: 0 0 0 6px transparent; } }
 
-        .connection-dot {
-            width: 8px;
-            height: 8px;
-            background: var(--primary);
-            border: 1px solid var(--text-main);
-        }
-
-        /* Main Content */
-        .main-content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 24px;
-        }
-
-        .main-title {
-            font-family: 'Anton', sans-serif;
-            font-size: 36px;
-            text-align: center;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-        }
-
-        /* Brutalist Button */
-        .action-btn {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-            width: 100%;
-            max-width: 300px;
-            padding: 16px 24px;
-            background: var(--primary);
-            border: var(--border-width) solid var(--text-main);
-            box-shadow: var(--shadow-offset) var(--shadow-offset) 0 0 var(--text-main);
-            color: #fff;
-            font-family: 'Space Mono', monospace;
-            font-size: 16px;
-            font-weight: 700;
-            text-transform: uppercase;
-            cursor: pointer;
-            transition: transform 0.1s, box-shadow 0.1s;
-        }
-
-        .action-btn:active {
-            transform: translate(var(--shadow-offset), var(--shadow-offset));
-            box-shadow: 0 0 0 0 var(--text-main);
-        }
-
-        /* Panels */
-        .transfer-panel, .receive-panel {
-            width: 100%;
-            max-width: 320px;
-            padding: 20px;
-            background: #fff;
-            border: var(--border-width) solid var(--text-main);
-            box-shadow: var(--shadow-offset) var(--shadow-offset) 0 0 var(--text-main);
-            display: none;
-            flex-direction: column;
-        }
-
-        .transfer-panel.active, .receive-panel.active {
-            display: flex;
-        }
-
-        .transfer-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 16px;
-            border-bottom: var(--border-width) solid var(--text-main);
-            padding-bottom: 12px;
-        }
-
-        .transfer-info {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .transfer-icon {
-            width: 36px;
-            height: 36px;
-            background: #fff;
-            border: var(--border-width) solid var(--text-main);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .transfer-name {
-            font-size: 14px;
-            font-weight: 700;
-            max-width: 140px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .transfer-status {
-            font-size: 12px;
-            font-weight: 400;
-        }
-
-        .file-item {
-            display: flex;
-            align-items: center;
-            padding: 12px 16px;
-            background: rgba(255,255,255,0.05);
-            border-radius: 12px;
-            border: 1px solid rgba(255,255,255,0.1);
-        }
-        .preset-btn {
-            background: #fff; border: 2px solid #111; font-family: 'Space Mono'; font-size: 12px; font-weight: bold; padding: 4px 8px; cursor: pointer; transition: all 0.2s;
-        }
-        .preset-btn:active {
-            background: #111; color: #fff;
-        }
-
-        .live-badge {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 12px;
-            font-weight: 700;
-            text-transform: uppercase;
-        }
-        .live-badge::before {
+        /* Tunnel */
+        .tunnel { position: relative; height: 360px; }
+        .tunnel canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+        .tunnel::before, .tunnel::after {
             content: '';
-            width: 8px;
-            height: 8px;
-            background: var(--primary);
-            border: 1px solid var(--text-main);
-            animation: pulse 1s infinite alternate;
+            position: absolute;
+            left: 20px;
+            right: 20px;
+            height: 6px;
+            background: repeating-linear-gradient(90deg, var(--hairline-strong) 0 1px, transparent 1px 24px);
         }
-        
-        @keyframes pulse {
-            0% { opacity: 1; }
-            100% { opacity: 0.5; }
-        }
+        .tunnel::before { top: 0; }
+        .tunnel::after { bottom: 0; }
 
-        .progress-bar {
-            height: 12px;
-            background: #fff;
-            border: var(--border-width) solid var(--text-main);
-            margin-bottom: 16px;
-            position: relative;
+        .body {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 196px;
+            height: 196px;
+            margin: -98px 0 0 -98px;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            align-content: center;
+            gap: 8px;
+            text-align: center;
+            background: radial-gradient(circle at 50% 30%, #1b1f26, #0e1115 70%);
+            border: 1px solid var(--hairline-strong);
+            box-shadow: 0 0 0 12px rgba(255, 255, 255, 0.015), 0 30px 70px -25px #000;
+            transition: transform .35s var(--ease), border-color .35s var(--ease), box-shadow .35s var(--ease);
         }
-        .progress-fill {
-            height: 100%;
-            background: var(--primary);
-            width: 0%;
-            transition: width 0.3s;
-            border-right: var(--border-width) solid var(--text-main);
-        }
+        .body:not(:disabled):active { transform: scale(0.97); }
+        .body:disabled { cursor: default; }
+        .body[data-mode='idle'] { border-color: rgba(255, 91, 31, 0.55); box-shadow: 0 0 0 12px var(--signal-soft), 0 30px 70px -25px var(--signal-glow); }
+        .body .ring { position: absolute; inset: -1px; width: calc(100% + 2px); height: calc(100% + 2px); transform: rotate(-90deg); }
+        .body .ring circle { fill: none; stroke-width: 3; }
+        .body .ring .track { stroke: transparent; }
+        .body .ring .fill { stroke: var(--signal); stroke-linecap: round; transition: stroke-dashoffset .3s var(--ease); }
+        .body .big { font-size: 22px; }
+        .body .small { font-family: var(--mono); font-size: 11px; color: var(--smoke-2); letter-spacing: .06em; }
+        .body .pct { font-family: var(--mono); font-size: 34px; font-weight: 500; font-variant-numeric: tabular-nums; }
+        .body .pct small { font-size: 14px; color: var(--smoke-3); }
 
-        .stats-row {
+        .caption {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            padding: 24px 20px 14px;
             display: flex;
             justify-content: space-between;
-            margin-bottom: 16px;
-        }
-        .stat {
-            text-align: left;
-        }
-        .stat-label {
-            font-size: 10px;
-            text-transform: uppercase;
-            font-weight: 700;
-        }
-        .stat-value {
-            font-size: 14px;
-            font-weight: 700;
+            background: linear-gradient(to bottom, transparent, var(--bg) 70%);
         }
 
-        .cancel-btn {
-            width: 100%;
-            padding: 12px;
-            background: #fff;
-            border: var(--border-width) solid var(--text-main);
-            box-shadow: 2px 2px 0 0 var(--text-main);
-            font-family: 'Space Mono', monospace;
-            font-size: 12px;
-            font-weight: 700;
-            text-transform: uppercase;
-            cursor: pointer;
-        }
-        .cancel-btn:active {
-            transform: translate(2px, 2px);
-            box-shadow: 0 0 0 0 var(--text-main);
-        }
+        /* Copy & panels */
+        main { padding: 18px 20px 0; flex: 1; display: flex; flex-direction: column; gap: 18px; }
+        h1 { font-size: 30px; }
+        .sub { margin-top: 8px; font-size: 14.5px; line-height: 1.5; color: var(--smoke-2); }
 
-        /* Receive Panel */
-        .receive-panel {
-            align-items: center;
-            text-align: center;
+        .card {
+            border: 1px solid var(--hairline);
+            border-radius: 16px;
+            background: var(--panel);
+            padding: 16px;
+            display: none;
         }
-        .receive-icon-wrapper {
-            width: 64px;
-            height: 64px;
-            background: #fff;
-            border: var(--border-width) solid var(--text-main);
-            box-shadow: 4px 4px 0 0 var(--text-main);
-            display: flex;
+        .card.active { display: block; animation: rise .45s var(--ease) both; }
+        @keyframes rise { from { opacity: 0; transform: translateY(8px); } }
+        .file { display: flex; align-items: center; gap: 10px; min-width: 0; }
+        .file .name { font-size: 15px; font-weight: 560; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .dir { flex: none; width: 24px; height: 24px; border-radius: 7px; display: grid; place-items: center; background: rgba(255, 255, 255, 0.05); color: var(--smoke-2); }
+        .dir.in { color: var(--signal); }
+        .readout { display: grid; grid-template-columns: 1.4fr 1fr; gap: 8px; margin-top: 14px; }
+        .value { font-family: var(--mono); font-size: 19px; font-weight: 500; margin-top: 4px; font-variant-numeric: tabular-nums; }
+
+        .btn {
+            height: 48px;
+            padding: 0 18px;
+            border-radius: 13px;
+            display: inline-flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 24px;
-        }
-        .receive-icon-wrapper svg {
-            width: 32px;
-            height: 32px;
-            color: var(--text-main);
-        }
-        .receive-filename {
-            font-family: 'Anton', sans-serif;
-            font-size: 24px;
-            margin-bottom: 8px;
-            word-break: break-all;
-        }
-        .receive-message {
-            font-size: 12px;
-            margin-bottom: 24px;
-            border: var(--border-width) solid var(--text-main);
-            padding: 8px;
-            background: #fff;
-        }
-        .receive-btn {
-            width: 100%;
-            padding: 14px;
-            background: var(--primary);
-            color: #fff;
-            border: var(--border-width) solid var(--text-main);
-            box-shadow: var(--shadow-offset) var(--shadow-offset) 0 0 var(--text-main);
-            font-family: 'Space Mono', monospace;
-            font-weight: 700;
-            text-transform: uppercase;
+            gap: 8px;
+            font-weight: 600;
+            font-size: 15px;
             text-decoration: none;
-            cursor: pointer;
-            margin-bottom: 12px;
-            display: inline-block;
+            transition: background .2s var(--ease), transform .15s var(--ease);
         }
-        .receive-btn:active {
-            transform: translate(var(--shadow-offset), var(--shadow-offset));
-            box-shadow: 0 0 0 0 var(--text-main);
-        }
-        .receive-done-btn {
-            background: #fff;
-            color: var(--text-main);
-        }
+        .btn:active { transform: translateY(1px); }
+        .btn-primary { background: var(--signal); color: #160700; }
+        .btn-ghost { border: 1px solid var(--hairline-strong); color: var(--smoke); }
+        .row { display: flex; gap: 10px; margin-top: 14px; }
+        .row .btn { flex: 1; }
+        .linkish { margin-top: 14px; font-size: 13px; color: var(--smoke-3); text-decoration: underline; text-underline-offset: 3px; }
 
-        /* Recent Files */
-        .recents {
-            width: 100%;
-            max-width: 320px;
-        }
-        .recents-header {
-            font-size: 12px;
-            font-weight: 700;
-            text-transform: uppercase;
-            margin-bottom: 12px;
-            border-bottom: var(--border-width) solid var(--text-main);
-            padding-bottom: 4px;
-        }
+        .recents-head { margin-bottom: 4px; }
         .recent-item {
-            display: flex;
+            display: grid;
+            grid-template-columns: 24px 1fr auto;
             align-items: center;
-            gap: 12px;
-            padding: 12px;
-            background: #fff;
-            border: var(--border-width) solid var(--text-main);
-            box-shadow: 2px 2px 0 0 var(--text-main);
-            margin-bottom: 12px;
-            transition: transform 0.1s, box-shadow 0.1s;
-        }
-        .recent-icon {
-            width: 32px;
-            height: 32px;
-            background: #fff;
-            border: var(--border-width) solid var(--text-main);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-        }
-        .recent-name {
-            flex: 1;
-            font-size: 12px;
-            font-weight: 700;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        .recent-badge {
-            font-size: 10px;
-            padding: 2px 6px;
-            border: 1px solid var(--text-main);
-            background: var(--primary);
-            color: #fff;
-            font-weight: 700;
-            text-transform: uppercase;
-        }
-
-        /* Stats Banner */
-        .stats-banner {
-            width: 100%;
-            max-width: 320px;
-            padding: 12px;
-            background: #fff;
-            border: var(--border-width) solid var(--text-main);
-            box-shadow: var(--shadow-offset) var(--shadow-offset) 0 0 var(--text-main);
-            margin-bottom: 20px;
-            display: none;
-        }
-        .stats-banner.show {
-            display: block;
-        }
-        .stats-banner-content {
+            gap: 10px;
+            padding: 11px 0;
+            border-bottom: 1px solid var(--hairline);
             font-size: 14px;
-            font-weight: 700;
-            text-align: center;
-            color: var(--primary);
         }
+        .recent-item:last-child { border-bottom: 0; }
+        .recent-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .recent-meta { font-family: var(--mono); font-size: 11px; color: var(--smoke-3); }
 
-        /* Bottom Bar */
-        .bottom-bar {
-            text-align: center;
+        footer {
+            padding: 22px 20px 26px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
             font-size: 12px;
-            font-weight: 700;
-            text-transform: uppercase;
-            margin-top: auto;
+            color: var(--smoke-3);
+            line-height: 1.45;
         }
+        footer svg { flex: none; color: var(--smoke-2); }
 
-        input[type="file"] {
-            display: none;
+        input[type='file'] { display: none; }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation: none !important; transition: none !important; }
         }
     </style>
 </head>
 
 <body>
     <div class="app">
-        <!-- Title Bar -->
-        <div class="title-bar">
-            <div class="logo">
-                <div class="logo-icon">A</div>
-                <span class="logo-text">Aero</span>
+        <header>
+            <div class="brand">
+                <svg width="26" height="26" viewBox="0 0 64 64" aria-hidden="true" style="overflow:visible"><path d="M5 55C11.5 55 25.76 17 32 8C38.24 17 52.5 55 59 55" fill="none" stroke="#E8ECF0" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M11.2 55C17.7 55 27.2 24 32 15C36.8 24 46.3 55 52.8 55" fill="none" stroke="#E8ECF0" stroke-opacity=".5" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M-4 41.2C12 41.2 22 38.8 32 38.8S52 41.2 68 41.2" fill="none" stroke="#FF5B1F" stroke-width="4" stroke-linecap="round"/></svg>
+                <span class="wordmark">AERO</span>
             </div>
-            <div style="display: flex; gap: 8px;">
-                <div class="connection-badge">
-                    <div class="connection-dot" id="connDot"></div>
-                    <span id="connText">Connecting…</span>
-                </div>
-            </div>
-        </div>
+            <span class="pill" id="conn" data-state="connecting" role="status" aria-live="polite">
+                <span class="dot"></span><span id="connText">Linking…</span>
+            </span>
+        </header>
 
-        <!-- Main Content -->
-        <div class="main-content">
-            <!-- Stats Banner (permanent display) -->
-            <div class="stats-banner" id="statsBanner">
-                <div class="stats-banner-content" id="statsContent">--</div>
-            </div>
-
-            <h1 class="main-title" id="mainTitle">Send Files to PC</h1>
-
-            <!-- Action Button -->
-            <button class="action-btn" id="selectBtn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                    <polyline points="17 8 12 3 7 8" />
-                    <line x1="12" y1="3" x2="12" y2="15" />
+        <section class="tunnel" aria-label="Send files">
+            <canvas id="flow" aria-hidden="true"></canvas>
+            <button class="body" id="sendBtn" data-mode="idle" aria-label="Choose files to send to your PC">
+                <svg class="ring" viewBox="0 0 100 100" aria-hidden="true">
+                    <circle class="track" cx="50" cy="50" r="48.5"/>
+                    <circle class="fill" id="ringFill" cx="50" cy="50" r="48.5" stroke-dasharray="304.7" stroke-dashoffset="304.7"/>
                 </svg>
-                Select Files
+                <span id="bodyContent"></span>
             </button>
+            <div class="caption" aria-hidden="true">
+                <span class="label">Test section</span>
+                <span class="label">U∞ <span id="uinf">—</span></span>
+            </div>
+        </section>
 
-            <!-- Transfer Panel -->
-            <div class="transfer-panel" id="transferPanel">
-                <div class="transfer-header">
-                    <div class="transfer-info">
-                        <div class="transfer-icon">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                                <polyline points="17 8 12 3 7 8" />
-                                <line x1="12" y1="3" x2="12" y2="15" />
-                            </svg>
-                        </div>
-                        <div>
-                            <div class="transfer-name" id="fileName">file.zip</div>
-                            <div class="transfer-status" id="transferStatus">Sending...</div>
-                        </div>
-                    </div>
-                    <div class="live-badge">Live</div>
-                </div>
-                <div class="progress-bar">
-                    <div class="progress-fill" id="progressFill" style="width: 0%"></div>
-                </div>
-                <div class="stats-row">
-                    <div class="stat">
-                        <div class="stat-label">Speed</div>
-                        <div class="stat-value highlight" id="speedStat">0 MB/s</div>
-                    </div>
-                    <div class="stat">
-                        <div class="stat-label">Progress</div>
-                        <div class="stat-value" id="progressStat">0%</div>
-                    </div>
-                    <div class="stat">
-                        <div class="stat-label">ETA</div>
-                        <div class="stat-value" id="etaStat">--</div>
-                    </div>
-                </div>
-                <button class="cancel-btn" id="cancelBtn">Tap to cancel</button>
+        <main>
+            <div>
+                <h1 class="display" id="title">Send to your PC</h1>
+                <p class="sub" id="subtitle">Tap the circle to pick photos, videos or any file. Files from your PC land here automatically.</p>
             </div>
 
-            <!-- Receive Panel -->
-            <div class="receive-panel" id="receivePanel">
-                <div class="receive-icon-wrapper">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                        <polyline points="7 10 12 15 17 10" />
-                        <line x1="12" y1="15" x2="12" y2="3" />
-                    </svg>
+            <div class="card" id="transferPanel" aria-live="polite">
+                <div class="file">
+                    <span class="dir" id="dirIcon"></span>
+                    <span class="name" id="fileName">file</span>
                 </div>
-                <div class="receive-filename" id="receiveFilename">file.zip</div>
-                <div class="receive-message">
-                    <strong>File received!</strong><br/>
-                    It has been saved to your downloads. If nothing appeared, tap Save again.
+                <div class="readout">
+                    <div><div class="label">Velocity</div><div class="value" id="speedStat">—</div></div>
+                    <div><div class="label">ETA</div><div class="value" id="etaStat">—</div></div>
                 </div>
-                <a href="#" class="receive-btn" id="receiveBtn">Save Again</a>
-                <button class="receive-btn receive-done-btn" id="receiveDoneBtn">Done</button>
+                <div class="label" id="transferStatus" style="margin-top: 12px; letter-spacing: .06em; text-transform: none;"></div>
+                <button class="btn btn-ghost" id="cancelBtn" style="width: 100%; margin-top: 14px;">Cancel transfer</button>
+                <div class="label" style="margin-top: 10px; text-align: center; letter-spacing: .06em; text-transform: none;">All or nothing: a cancelled file is never half-saved.</div>
             </div>
 
-            <!-- Recent Files -->
-            <div class="recents" id="recents"></div>
-            <!-- Bottom Stats (Recent Files zone) -->
-            <div class="bottom-bar">
-                <div id="recentFilesContainer" style="display: flex; flex-direction: column; gap: 8px;">
-                    <!-- Recent items will be inserted here -->
+            <div class="card" id="receivePanel">
+                <div class="file">
+                    <span class="dir in"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M17 7 7 17M17 17H7V7"/></svg></span>
+                    <span class="name" id="receiveFilename">file</span>
+                </div>
+                <p class="sub" style="font-size: 13.5px;">Landed in your downloads. If nothing appeared, tap Save again.</p>
+                <div class="row">
+                    <a href="#" class="btn btn-ghost" id="receiveBtn">Save again</a>
+                    <button class="btn btn-primary" id="receiveDoneBtn">Done</button>
                 </div>
             </div>
-        </div>
+
+            <div id="recents"></div>
+        </main>
+
+        <footer>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+            <span>End-to-end encrypted. The key came from the QR code and never leaves this page.</span>
+        </footer>
     </div>
 
     <input type="file" id="fileInput" multiple>
@@ -545,5 +312,4 @@
     <script src="/cipher.js"></script>
     <script src="/app.js"></script>
 </body>
-
 </html>

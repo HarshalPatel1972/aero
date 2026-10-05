@@ -9,3 +9,14 @@ import "golang.org/x/sys/windows"
 func userDownloadsDir() (string, error) {
 	return windows.KnownFolderPath(windows.FOLDERID_Downloads, 0)
 }
+
+// hidePath sets the Windows hidden attribute so staging data stays out of sight.
+func hidePath(path string) {
+	p, err := windows.UTF16PtrFromString(path)
+	if err != nil {
+		return
+	}
+	if attrs, err := windows.GetFileAttributes(p); err == nil {
+		windows.SetFileAttributes(p, attrs|windows.FILE_ATTRIBUTE_HIDDEN)
+	}
+}

@@ -33,8 +33,13 @@ const (
 	// authHeader carries the request auth token.
 	authHeader = "X-Aero-Auth"
 
-	// uploadIdleTimeout discards uploads the phone has abandoned.
-	uploadIdleTimeout = 15 * time.Minute
+	// uploadIdleTimeout discards uploads the phone has abandoned (closed the
+	// page, lost Wi-Fi, crashed). Their partial data is deleted.
+	uploadIdleTimeout = 5 * time.Minute
+	// stagingDirName holds in-progress uploads inside the download folder, so
+	// a file only appears to the user once every byte has arrived and been
+	// verified. Same volume as the destination, so the final rename is atomic.
+	stagingDirName = ".aero-incoming"
 	// downloadTTL is how long a file offered to the phone stays downloadable.
 	downloadTTL = time.Hour
 	// maxActiveUploads caps concurrent uploads to bound open files and disk use.
@@ -45,10 +50,12 @@ const (
 
 // Event reports transfer progress to the desktop UI.
 type Event struct {
+	ID        string  `json:"id"`
 	Filename  string  `json:"filename"`
+	Size      int64   `json:"size"`
 	Progress  float64 `json:"progress"`
 	Speed     string  `json:"speed"`
-	Status    string  `json:"status"`    // started | progress | completed | error
+	Status    string  `json:"status"`    // started | progress | completed | cancelled | error
 	Direction string  `json:"direction"` // receive (phone to PC) | send (PC to phone)
 }
 
@@ -64,6 +71,9 @@ type Options struct {
 	OnEvent func(Event)
 	// OnError is called if the server stops unexpectedly. It may be nil.
 	OnError func(error)
+	// OnPhones is called with the number of connected phones whenever it
+	// changes. It may be nil.
+	OnPhones func(count int)
 }
 
 // Server is a running transfer server bound to one session key.
@@ -73,6 +83,7 @@ type Server struct {
 	hostport string
 	dir      string
 	onEvent  func(Event)
+	onPhones func(int)
 
 	httpServer *http.Server
 	stop       chan struct{}
@@ -87,6 +98,9 @@ type Server struct {
 func Start(opts Options) (*Server, error) {
 	if err := os.MkdirAll(opts.DownloadDir, 0o755); err != nil {
 		return nil, fmt.Errorf("cannot create download folder: %w", err)
+	}
+	if err := resetStaging(filepath.Join(opts.DownloadDir, stagingDirName)); err != nil {
+		return nil, fmt.Errorf("cannot prepare staging folder: %w", err)
 	}
 
 	keyB64, key, err := security.GenerateSessionKey()
@@ -109,6 +123,7 @@ func Start(opts Options) (*Server, error) {
 		hostport:  ln.Addr().String(),
 		dir:       opts.DownloadDir,
 		onEvent:   opts.OnEvent,
+		onPhones:  opts.OnPhones,
 		stop:      make(chan struct{}),
 		phones:    make(map[*phone]struct{}),
 		uploads:   make(map[string]*upload),
@@ -210,7 +225,8 @@ func (s *Server) janitor() {
 				if now.Sub(u.lastActivity()) > uploadIdleTimeout {
 					u.abort()
 					delete(s.uploads, id)
-					s.emit(Event{Filename: u.name, Status: "error", Direction: "receive"})
+					s.emit(Event{ID: u.id, Filename: u.name, Size: u.size, Status: "error", Direction: "receive"})
+					log.Printf("[AERO] Discarded abandoned upload %q", u.name)
 				}
 			}
 			for id, d := range s.downloads {
@@ -230,6 +246,9 @@ func (s *Server) routes() http.Handler {
 	mux.HandleFunc("GET /{$}", s.serveStatic("web/index.html", "text/html; charset=utf-8"))
 	mux.HandleFunc("GET /app.js", s.serveStatic("web/app.js", "text/javascript; charset=utf-8"))
 	mux.HandleFunc("GET /cipher.js", s.serveStatic("web/cipher.js", "text/javascript; charset=utf-8"))
+	mux.HandleFunc("GET /crypto-worker.js", s.serveStatic("web/crypto-worker.js", "text/javascript; charset=utf-8"))
+	mux.HandleFunc("GET /fonts/archivo.woff2", s.serveStatic("web/fonts/archivo.woff2", "font/woff2"))
+	mux.HandleFunc("GET /fonts/jetbrains-mono.woff2", s.serveStatic("web/fonts/jetbrains-mono.woff2", "font/woff2"))
 
 	// Authenticated API.
 	mux.Handle("GET /api/ws", s.requireAuth(true, http.HandlerFunc(s.handleWS)))
@@ -237,6 +256,7 @@ func (s *Server) routes() http.Handler {
 	mux.Handle("PUT /api/upload/{id}/{index}", s.requireAuth(false, http.HandlerFunc(s.handleUploadChunk)))
 	mux.Handle("DELETE /api/upload/{id}", s.requireAuth(false, http.HandlerFunc(s.handleUploadCancel)))
 	mux.Handle("GET /api/download/{id}/{index}", s.requireAuth(false, http.HandlerFunc(s.handleDownloadChunk)))
+	mux.Handle("DELETE /api/download/{id}", s.requireAuth(false, http.HandlerFunc(s.handleDownloadCancel)))
 
 	return s.checkHost(mux)
 }
@@ -288,7 +308,7 @@ func (s *Server) serveStatic(name, contentType string) http.HandlerFunc {
 		h.Set("Referrer-Policy", "no-referrer")
 		h.Set("Content-Security-Policy",
 			"default-src 'none'; script-src 'self'; connect-src 'self' ws://"+s.hostport+"; "+
-				"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; "+
+				"style-src 'self' 'unsafe-inline'; font-src 'self'; "+
 				"img-src 'self' data: blob:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'")
 		w.Write(body)
 	}
@@ -312,7 +332,45 @@ func formatSpeed(bytes int64, since time.Time) string {
 
 // partPath is where an in-progress upload is written before it is renamed.
 func (s *Server) partPath(id string) string {
-	return filepath.Join(s.dir, ".aero-"+id+".part")
+	return filepath.Join(s.dir, stagingDirName, id+".part")
+}
+
+// resetStaging recreates the staging folder empty. Anything left in it is
+// from a transfer that never finished (e.g. Aero was killed), so it is
+// incomplete by definition and must not survive.
+func resetStaging(dir string) error {
+	if err := os.RemoveAll(dir); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return err
+	}
+	hidePath(dir)
+	return nil
+}
+
+// Cancel stops a transfer from the PC side. Partial data is deleted and the
+// phone is told to stop, so nothing incomplete is ever kept on either end.
+func (s *Server) Cancel(id string) bool {
+	s.mu.Lock()
+	u := s.uploads[id]
+	delete(s.uploads, id)
+	d := s.downloads[id]
+	delete(s.downloads, id)
+	s.mu.Unlock()
+
+	switch {
+	case u != nil:
+		u.abort()
+		s.emit(Event{ID: u.id, Filename: u.name, Size: u.size, Status: "cancelled", Direction: "receive"})
+	case d != nil:
+		s.emit(Event{ID: d.id, Filename: d.name, Size: d.size, Status: "cancelled", Direction: "send"})
+	default:
+		return false
+	}
+	s.broadcast(map[string]any{"type": "cancel", "id": id})
+	log.Printf("[AERO] Transfer %s cancelled on the PC", id)
+	return true
 }
 
 // tcpNoDelayListener disables Nagle's algorithm on accepted connections.

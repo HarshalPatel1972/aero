@@ -16,9 +16,9 @@
   "info": {
     "companyName": "AERO Project",
     "productName": "Aero",
-    "productVersion": "1.0.0",
+    "productVersion": "2.0.0",
     "copyright": "© 2026 Aero Project",
-    "comments": "High-Speed Local File Transfer",
+    "comments": "Encrypted, zero-drag file transfer between your phone and PC",
     "fileDescription": "Aero - Secure LAN File Transfer"
   },
   "nsisType": "multiple",
